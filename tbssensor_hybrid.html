@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<title>Sistem Monitoring Kandang Anak Ayam</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-container": "#e5eeff",
+        "surface-bright": "#f8f9ff",
+        "secondary": "#006c49",
+        "secondary-fixed": "#6ffbbe",
+        "outline": "#727785",
+        "on-primary-fixed": "#001a42",
+        "on-surface": "#0b1c30",
+        "on-primary-container": "#fefcff",
+        "on-secondary-fixed": "#002113",
+        "on-secondary-container": "#00714d",
+        "primary-fixed": "#d8e2ff",
+        "primary": "#0058be",
+        "primary-container": "#2170e4",
+        "primary-fixed-dim": "#adc6ff",
+        "on-error-container": "#93000a",
+        "surface-container-highest": "#d3e4fe",
+        "secondary-fixed-dim": "#4edea3",
+        "tertiary-fixed": "#ffddb8",
+        "inverse-primary": "#adc6ff",
+        "on-tertiary-container": "#fffbff",
+        "on-secondary": "#ffffff",
+        "surface-dim": "#cbdbf5",
+        "on-tertiary-fixed-variant": "#653e00",
+        "tertiary": "#825100",
+        "secondary-container": "#6cf8bb",
+        "on-error": "#ffffff",
+        "on-tertiary": "#ffffff",
+        "background": "#f8f9ff",
+        "on-surface-variant": "#424754",
+        "on-tertiary-fixed": "#2a1700",
+        "on-primary": "#ffffff",
+        "tertiary-container": "#a36700",
+        "inverse-surface": "#213145",
+        "inverse-on-surface": "#eaf1ff",
+        "surface-container-low": "#eff4ff",
+        "tertiary-fixed-dim": "#ffb95f",
+        "on-primary-fixed-variant": "#004395",
+        "outline-variant": "#c2c6d6",
+        "surface-variant": "#d3e4fe",
+        "surface-container-high": "#dce9ff",
+        "error": "#ba1a1a",
+        "error-container": "#ffdad6",
+        "surface": "#f8f9ff",
+        "on-secondary-fixed-variant": "#005236",
+        "surface-container-lowest": "#ffffff",
+        "surface-tint": "#005ac2",
+        "on-background": "#0b1c30"
+      },
+      fontFamily: {
+        sans: ["Inter", "sans-serif"]
+      },
+      fontSize: {
+        "label-sm":   ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }],
+        "headline-md":["24px", { lineHeight: "32px", fontWeight: "600" }],
+        "body-lg":    ["18px", { lineHeight: "28px", fontWeight: "400" }],
+        "label-md":   ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "500" }],
+        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "body-md":    ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "headline-lg":["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "label-lg":   ["16px", { lineHeight: "24px", fontWeight: "600" }]
+      }
+    }
+  }
+}
+</script>
+
+<style>
+  /* ─── BASE ─────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; overflow-x: hidden; }
+  body { font-family: 'Inter', sans-serif; background: #f8f9ff; }
+
+  /* ─── GLASS CARD ────────────────────────────────── */
+  .glass-card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: 0 4px 24px rgba(0,88,190,0.06);
+  }
+
+  /* ─── SIDEBAR ───────────────────────────────────── */
+  #sidebar {
+    width: 72px;
+    transition: width 0.3s ease;
+    overflow: hidden;
+  }
+  #sidebar .label-text { display: none; white-space: nowrap; }
+
+  @media (min-width: 1024px) {
+    #sidebar { width: 240px; }
+    #sidebar .label-text { display: inline; }
+    #sidebar .brand-name { display: block; }
+  }
+
+  /* ─── SCROLLBAR ─────────────────────────────────── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #c2c6d6; border-radius: 99px; }
+
+  /* ─── CHART TIME FILTER ACTIVE ──────────────────── */
+  .time-btn.active {
+    background: #ffffff;
+    color: #0b1c30;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    font-weight: 600;
+  }
+  .time-btn {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .time-btn:not(.active):hover {
+    background: rgba(0,88,190,0.06);
+    color: #0058be;
+  }
+
+  /* ─── TOAST ANIMATION ────────────────────────────── */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .toast-enter { animation: slideUp 0.25s ease forwards; }
+
+  /* ─── SAFE AREA (notch/home bar) ─────────────────── */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+
+  /* ─── GAUGE CIRCLE ───────────────────────────────── */
+  .gauge-track  { stroke: #d3e4fe; }
+  .gauge-fill   { transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease; }
+
+  /* ─── RESPONSIVE DISPLAY-LG ON SMALL SCREEN ─────── */
+  @media (max-width: 360px) {
+    .val-display { font-size: 36px !important; }
+  }
+
+  /* ─── APEXCHARTS ──────────────────────────────────── */
+  .apexcharts-tooltip {
+    background: rgba(255,255,255,0.97) !important;
+    border: 1px solid #e5eeff !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important;
+    border-radius: 0.5rem !important;
+  }
+  .apexcharts-tooltip-title {
+    background: #f8f9ff !important;
+    border-bottom: 1px solid #e5eeff !important;
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 600 !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+  .apexcharts-tooltip-series-group { padding: 4px 12px !important; }
+  .apexcharts-text { font-family: 'Inter', sans-serif !important; }
+
+  /* ─── PREVENT HORIZONTAL OVERFLOW ON MOBILE ──────── */
+  .main-content { min-width: 0; max-width: 100%; }
+  .chart-wrapper { min-height: 200px; width: 100%; overflow: hidden; }
+</style>
+</head>
+
+<body class="text-on-background flex h-full">
+
+<!-- ═══════════════════════════════════════════════════
+     TOAST
+══════════════════════════════════════════════════════ -->
+<div class="fixed bottom-20 right-3 md:bottom-6 md:right-6 z-[999] flex flex-col gap-2 pointer-events-none" id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════
+     DESKTOP SIDEBAR (hidden on mobile)
+══════════════════════════════════════════════════════ -->
+<aside id="sidebar" class="hidden md:flex flex-col fixed inset-y-0 left-0 bg-surface-container-lowest border-r border-outline-variant z-30 shrink-0">
+  <!-- Brand -->
+  <div class="flex items-center gap-3 px-4 py-5 border-b border-outline-variant overflow-hidden">
+    <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary shrink-0">
+      <span class="material-symbols-outlined text-[20px]">nest_eco_leaf</span>
+    </div>
+    <div class="brand-name hidden overflow-hidden">
+      <p class="text-label-md font-bold text-on-surface leading-tight truncate">Smart Farm</p>
+      <p class="text-[11px] text-on-surface-variant truncate">Monitoring Kandang</p>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
+    <a href="#" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-colors overflow-hidden">
+      <span class="material-symbols-outlined text-xl shrink-0">dashboard</span>
+      <span class="label-text text-label-md">Dashboard</span>
+    </a>
+    <a href="#" id="nav-pengaturan" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-colors text-on-surface-variant hover:bg-surface-container-low overflow-hidden">
+      <span class="material-symbols-outlined text-xl shrink-0">settings</span>
+      <span class="label-text text-label-md">Pengaturan</span>
+    </a>
+  </nav>
+
+  <!-- User -->
+  <div class="p-3 border-t border-outline-variant overflow-hidden">
+    <div class="flex items-center gap-3 px-2 py-2 overflow-hidden">
+      <span class="material-symbols-outlined text-xl shrink-0 text-on-surface-variant">account_circle</span>
+      <div class="hidden lg:block overflow-hidden">
+        <p class="text-label-sm font-medium text-on-surface truncate">LAB ELEKTRONIKA</p>
+        <p class="text-[10px] text-on-surface-variant truncate">UNIVERSITAS JEMBER</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN WRAPPER
+══════════════════════════════════════════════════════ -->
+<div class="flex-1 flex flex-col md:pl-[72px] lg:pl-[240px] transition-all duration-300 min-w-0 h-full overflow-y-auto" id="main-wrapper">
+
+  <!-- ── TOPBAR ─────────────────────────────────────── -->
+  <header class="glass-card sticky top-0 z-20 px-4 md:px-6 py-3 border-b border-outline-variant shrink-0">
+    <div class="flex justify-between items-center gap-3">
+      <div class="min-w-0">
+        <h1 class="text-[15px] md:text-headline-md font-bold text-on-surface leading-tight truncate">
+          Sistem Monitoring Kandang Anak Ayam
+        </h1>
+        <p class="text-[11px] text-on-surface-variant mt-0.5 hidden sm:block truncate">
+          Monitoring suhu dan kadar gas secara realtime berbasis IoT
+        </p>
+      </div>
+      <div class="flex items-center gap-2 md:gap-4 shrink-0">
+        <!-- Jam -->
+        <div class="hidden sm:block text-right">
+          <div class="text-[18px] md:text-headline-md font-bold text-on-surface tabular-nums" id="live-clock">--:--</div>
+        </div>
+        <div class="h-6 w-px bg-outline-variant hidden sm:block"></div>
+        <!-- MQTT Badge -->
+        <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all text-[11px] md:text-label-sm font-medium" id="mqtt-status-badge">
+          <span class="relative flex h-2 w-2 shrink-0">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" id="mqtt-ping-outer"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2" id="mqtt-ping-inner"></span>
+          </span>
+          <span id="mqtt-status-text">Menghubungkan...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── MAIN CONTENT ────────────────────────────────── -->
+  <main class="flex-1 p-3 md:p-6 space-y-4 md:space-y-6 main-content pb-20 md:pb-6 w-full max-w-[1400px] mx-auto">
+
+    <!-- ══════════ SECTION DASHBOARD ══════════ -->
+    <div id="section-dashboard" class="space-y-4 md:space-y-6">
+
+      <!-- ALERT -->
+      <div id="alert-box" class="rounded-xl p-3 md:p-4 flex items-start gap-3 border shadow-sm bg-secondary-container/20 text-secondary border-secondary/20 transition-all duration-500">
+        <div class="p-1.5 rounded-full bg-current/10 mt-0.5 shrink-0">
+          <span class="material-symbols-outlined text-[20px]" id="alert-icon">check_circle</span>
+        </div>
+        <div class="min-w-0">
+          <p class="text-[14px] font-bold mb-0.5" id="alert-title">Sistem Normal</p>
+          <p class="text-[13px] opacity-90 leading-snug" id="alert-msg">Semua parameter dalam batas normal.</p>
+        </div>
+      </div>
+
+      <!-- ROW 1: SENSOR + KONTROL -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+
+        <!-- Suhu Card -->
+        <div class="glass-card rounded-2xl p-4 md:p-6 flex flex-col relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-20 h-20 bg-primary/5 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center gap-3 mb-4 relative z-10">
+            <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <span class="material-symbols-outlined text-[20px]">device_thermostat</span>
+            </div>
+            <div>
+              <h3 class="text-[13px] font-semibold text-on-surface-variant">Suhu Kandang</h3>
+              <p class="text-[11px] text-on-surface-variant">Realtime Sensor 1</p>
+            </div>
+          </div>
+          <div class="flex-1 flex items-center justify-center relative z-10 py-3">
+            <div class="relative flex items-center justify-center" style="width:120px;height:120px;">
+              <svg class="w-full h-full -rotate-90 drop-shadow-sm" viewBox="0 0 100 100">
+                <circle class="gauge-track" cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="8"/>
+                <circle id="gauge-suhu-arc" class="gauge-fill" cx="50" cy="50" r="42" fill="none" stroke="#0058be" stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round" stroke-width="8"/>
+              </svg>
+              <div class="absolute flex flex-col items-center">
+                <span class="val-display text-[40px] md:text-[48px] font-bold text-on-surface tracking-tighter leading-none" id="val-suhu">--</span>
+                <span class="text-[13px] text-on-surface-variant font-medium">°C</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gas Card -->
+        <div class="glass-card rounded-2xl p-4 md:p-6 flex flex-col relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-20 h-20 bg-tertiary/5 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center gap-3 mb-4 relative z-10">
+            <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary shrink-0">
+              <span class="material-symbols-outlined text-[20px]">air</span>
+            </div>
+            <div>
+              <h3 class="text-[13px] font-semibold text-on-surface-variant">Kadar Gas</h3>
+              <p class="text-[11px] text-on-surface-variant">Ammonia (NH3)</p>
+            </div>
+          </div>
+          <div class="flex-1 flex flex-col justify-center relative z-10">
+            <div class="flex items-baseline gap-2 mb-4">
+              <span class="val-display text-[40px] md:text-[48px] font-bold text-on-surface tracking-tighter leading-none" id="val-gas">--</span>
+              <span class="text-[13px] text-on-surface-variant font-medium">ppm</span>
+            </div>
+            <div class="space-y-2">
+              <div class="flex justify-between text-[11px] font-medium text-on-surface-variant">
+                <span>Normal</span>
+                <span>Max: <span id="gas-max-label">300</span> ppm</span>
+              </div>
+              <div class="w-full bg-surface-variant rounded-full h-3 overflow-hidden">
+                <div id="gas-bar" class="h-full rounded-full relative transition-all duration-700" style="width:0%;background:#825100;">
+                  <div class="absolute inset-0 bg-white/20"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kontrol Sistem -->
+        <div class="glass-card rounded-2xl p-4 md:p-6 flex flex-col sm:col-span-2 lg:col-span-1">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-[15px] font-bold text-on-surface">Kontrol Sistem</h3>
+            <!-- Mode Toggle -->
+            <div id="mode-switcher" class="bg-surface-container-low rounded-full p-1 flex items-center border border-outline-variant/50 cursor-pointer select-none">
+              <button id="btn-manual" class="px-3 py-1 rounded-full text-[10px] font-semibold text-on-surface-variant transition-all">Manual</button>
+              <button id="btn-auto"   class="px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-on-primary shadow-sm transition-all">Auto</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 gap-3 flex-1">
+            <!-- Kipas -->
+            <div id="container-kipas" class="bg-primary/5 rounded-xl p-3 md:p-4 flex items-center justify-between border border-primary/20 transition-all">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span id="icon-kipas" class="material-symbols-outlined text-primary animate-spin" style="animation-duration:2s;">mode_fan</span>
+                </div>
+                <div>
+                  <span class="text-[13px] font-bold text-on-surface block">Kipas Exhaust</span>
+                  <span id="label-kipas" class="text-[11px] text-primary font-medium">Aktif</span>
+                </div>
+              </div>
+              <div id="toggle-kipas" class="w-11 h-6 bg-primary rounded-full relative opacity-50 cursor-pointer shrink-0 transition-all">
+                <div class="w-4 h-4 bg-white rounded-full absolute top-1 right-1 shadow transition-all"></div>
+              </div>
+            </div>
+            <!-- Lampu -->
+            <div id="container-lampu" class="bg-surface rounded-xl p-3 md:p-4 flex items-center justify-between border border-outline-variant/50 transition-all">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
+                  <span id="icon-lampu" class="material-symbols-outlined text-on-surface-variant">lightbulb</span>
+                </div>
+                <div>
+                  <span class="text-[13px] font-bold text-on-surface block">Lampu Pemanas</span>
+                  <span id="label-lampu" class="text-[11px] text-on-surface-variant font-medium">Mati</span>
+                </div>
+              </div>
+              <div id="toggle-lampu" class="w-11 h-6 bg-surface-variant rounded-full relative opacity-50 cursor-pointer shrink-0 transition-all">
+                <div class="w-4 h-4 bg-white rounded-full absolute top-1 left-1 shadow transition-all"></div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-outline-variant/50 flex items-start gap-2 text-[11px] text-on-surface-variant">
+            <span class="material-symbols-outlined text-[15px] shrink-0 mt-0.5">info</span>
+            <span id="mode-info-text">Mode Otomatis Aktif. Kontrol manual dinonaktifkan.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: BATAS AMBANG + CHART -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+
+        <!-- Batas Ambang -->
+        <div class="glass-card rounded-2xl p-4 md:p-6 flex flex-col bg-surface-container-lowest lg:col-span-1">
+          <h3 class="text-[13px] font-bold text-on-surface mb-4 border-b border-outline-variant pb-2">Batas Ambang</h3>
+          <div class="grid grid-cols-3 lg:grid-cols-1 gap-3">
+            <div class="flex flex-col sm:flex-row lg:flex-row justify-between items-start sm:items-center gap-1 bg-surface-container-low/60 p-2.5 rounded-xl lg:bg-transparent lg:p-0">
+              <div class="flex items-center gap-1.5 text-on-surface-variant">
+                <span class="material-symbols-outlined text-[16px]">ac_unit</span>
+                <span class="text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Suhu Min</span>
+              </div>
+              <div class="text-[15px] font-bold text-on-surface bg-surface-container px-2 py-0.5 rounded-lg" id="dashboard-temp-min">30°C</div>
+            </div>
+            <div class="flex flex-col sm:flex-row lg:flex-row justify-between items-start sm:items-center gap-1 bg-surface-container-low/60 p-2.5 rounded-xl lg:bg-transparent lg:p-0">
+              <div class="flex items-center gap-1.5 text-error">
+                <span class="material-symbols-outlined text-[16px]">local_fire_department</span>
+                <span class="text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Suhu Max</span>
+              </div>
+              <div class="text-[15px] font-bold text-error bg-error-container px-2 py-0.5 rounded-lg" id="dashboard-temp-max">35°C</div>
+            </div>
+            <div class="flex flex-col sm:flex-row lg:flex-row justify-between items-start sm:items-center gap-1 bg-surface-container-low/60 p-2.5 rounded-xl lg:bg-transparent lg:p-0">
+              <div class="flex items-center gap-1.5 text-tertiary">
+                <span class="material-symbols-outlined text-[16px]">co2</span>
+                <span class="text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Gas Max</span>
+              </div>
+              <div class="text-[15px] font-bold text-tertiary bg-tertiary-container px-2 py-0.5 rounded-lg" id="dashboard-gas-max">300<span class="text-[10px] font-normal ml-0.5">ppm</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart Card -->
+        <div class="glass-card rounded-2xl p-4 md:p-6 flex flex-col lg:col-span-3">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <div>
+              <h3 class="text-[15px] font-bold text-on-surface">Tren Historis</h3>
+              <p class="text-[11px] text-on-surface-variant mt-0.5" id="chart-subtitle">Data historis 12 jam terakhir</p>
+            </div>
+            <!-- Time Filter Buttons -->
+            <div class="flex bg-surface-container-low rounded-lg p-1 border border-outline-variant/30 text-[11px] gap-0.5 self-start sm:self-auto">
+              <button class="time-btn px-2.5 py-1.5 rounded-md text-on-surface-variant" data-window="1"  data-label="1 Jam">1 Jam</button>
+              <button class="time-btn px-2.5 py-1.5 rounded-md text-on-surface-variant" data-window="3"  data-label="3 Jam">3 Jam</button>
+              <button class="time-btn active px-2.5 py-1.5 rounded-md"                 data-window="12" data-label="12 Jam">12 Jam</button>
+              <button class="time-btn px-2.5 py-1.5 rounded-md text-on-surface-variant" data-window="24" data-label="24 Jam">24 Jam</button>
+            </div>
+          </div>
+
+          <!-- Charts: stack on mobile, side-by-side on lg -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
+            <div class="flex flex-col">
+              <h4 class="text-[12px] font-bold text-on-surface mb-1">Tren Suhu (°C)</h4>
+              <div class="chart-wrapper flex-1" id="chart-temp-container"></div>
+            </div>
+            <div class="flex flex-col">
+              <h4 class="text-[12px] font-bold text-on-surface mb-1">Tren Amonia (ppm)</h4>
+              <div class="chart-wrapper flex-1" id="chart-gas-container"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: LOG AKTIVITAS -->
+      <div class="glass-card rounded-2xl p-4 md:p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-[15px] font-bold text-on-surface">Log Aktivitas Terbaru</h3>
+          <button class="text-primary text-[12px] font-semibold hover:underline flex items-center gap-1">
+            Lihat Semua <span class="material-symbols-outlined text-[15px]">chevron_right</span>
+          </button>
+        </div>
+        <div class="space-y-2" id="activity-log">
+          <div class="flex items-start gap-3 p-2.5 rounded-xl hover:bg-surface-container-low transition-colors">
+            <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <span class="material-symbols-outlined text-[18px]">wifi</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex justify-between items-baseline gap-2 mb-0.5">
+                <p class="text-[13px] font-bold text-on-surface truncate">Sistem siap</p>
+                <span class="text-[11px] text-on-surface-variant shrink-0 font-mono" id="log-time-init">--:--</span>
+              </div>
+              <p class="text-[12px] text-on-surface-variant">Menghubungkan ke broker MQTT HiveMQ...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end section-dashboard -->
+
+    <!-- ══════════ SECTION PENGATURAN ══════════ -->
+    <div id="section-pengaturan" class="hidden space-y-4 md:space-y-6">
+      <div class="glass-card rounded-2xl p-4 md:p-8">
+        <h2 class="text-[20px] md:text-headline-md font-bold text-on-surface mb-6">Pengaturan Sistem</h2>
+        <div class="space-y-8 max-w-lg">
+
+          <!-- MQTT Config -->
+          <div class="space-y-4">
+            <h3 class="text-[14px] font-bold text-on-surface border-b border-outline-variant pb-2">Konfigurasi Broker MQTT</h3>
+            <p class="text-[12px] text-on-surface-variant">Konfigurasi koneksi ke HiveMQ Cloud (Free Tier). Daftar gratis di <a href="https://console.hivemq.cloud" target="_blank" class="text-primary underline">console.hivemq.cloud</a></p>
+            <div class="grid gap-3">
+              <div>
+                <label class="block text-[12px] font-semibold text-on-surface-variant mb-1.5">Host (WebSocket URL)</label>
+                <input id="setting-mqtt-host" type="text" placeholder="wss://xxxx.s1.eu.hivemq.cloud:8884/mqtt"
+                  class="w-full px-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] font-mono text-on-surface transition-all"/>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[12px] font-semibold text-on-surface-variant mb-1.5">Username</label>
+                  <input id="setting-mqtt-user" type="text" placeholder="username"
+                    class="w-full px-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
+                </div>
+                <div>
+                  <label class="block text-[12px] font-semibold text-on-surface-variant mb-1.5">Password</label>
+                  <input id="setting-mqtt-pass" type="password" placeholder="password"
+                    class="w-full px-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
+                </div>
+              </div>
+              <button onclick="reconnectMQTT()" class="flex items-center gap-2 px-4 py-2 bg-secondary text-on-secondary font-bold rounded-lg hover:opacity-90 transition-opacity shadow-sm text-[13px] w-fit">
+                <span class="material-symbols-outlined text-[18px]">wifi</span> Sambungkan Ulang
+              </button>
+            </div>
+          </div>
+
+          <!-- Threshold Config -->
+          <div class="space-y-4">
+            <h3 class="text-[14px] font-bold text-on-surface border-b border-outline-variant pb-2">Konfigurasi Batas Ambang</h3>
+            <p class="text-[12px] text-on-surface-variant">Nilai akan dikirimkan ke ESP32 via MQTT setelah disimpan.</p>
+            <div class="grid gap-4">
+              <div>
+                <label class="block text-[12px] font-semibold text-on-surface-variant mb-1.5">Batas Suhu Minimal (°C)</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[18px]">device_thermostat</span>
+                  </span>
+                  <input id="setting-temp-min" type="number" value="30"
+                    class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[12px] font-semibold text-on-surface-variant mb-1.5">Batas Suhu Maksimal (°C)</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[18px]">device_thermostat</span>
+                  </span>
+                  <input id="setting-temp-max" type="number" value="35"
+                    class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[12px] font-semibold text-on-surface-variant mb-1.5">Batas Gas Ammonia Maksimal (ppm)</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[18px]">air</span>
+                  </span>
+                  <input id="setting-gas-max" type="number" value="300"
+                    class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-4 border-t border-outline-variant">
+            <button id="btn-save-settings" class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-[13px]">
+              <span class="material-symbols-outlined text-[18px]">save</span> Simpan dan Sinkronkan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div><!-- end section-pengaturan -->
+
+  </main>
+</div><!-- end main-wrapper -->
+
+<!-- ═══════════════════════════════════════════════════
+     MOBILE BOTTOM NAV
+══════════════════════════════════════════════════════ -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around border-t border-outline-variant bg-surface-container-lowest glass-card pb-safe pt-1">
+  <a id="mob-dashboard" href="#" class="flex flex-col items-center gap-0.5 px-6 py-2 text-primary rounded-xl min-w-[64px]">
+    <span class="material-symbols-outlined text-[24px]">dashboard</span>
+    <p class="text-[10px] font-bold">Dashboard</p>
+  </a>
+  <a id="mob-pengaturan" href="#" class="flex flex-col items-center gap-0.5 px-6 py-2 text-on-surface-variant rounded-xl min-w-[64px]">
+    <span class="material-symbols-outlined text-[24px]">settings</span>
+    <p class="text-[10px] font-medium">Pengaturan</p>
+  </a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════
+     SCRIPT UTAMA
+══════════════════════════════════════════════════════ -->
+<script>
+
+const MQTT_CONFIG = {
+  host: 'wss://f6b15adb831b4e899fcc2748d294be88.s1.eu.hivemq.cloud:8884/mqtt',  // ← Ganti CLUSTER_ID
+  options: {
+    username: 'nyambek',   // ← Ganti
+    password: 'Sensor_123',   // ← Ganti
+    clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8),
+    keepalive: 60,
+    reconnectPeriod: 5000,
+    connectTimeout: 10000,
+    clean: true,
+  }
+};
+
+const TOPICS = {
+  KIPAS:              'kandang/kipas',
+  LAMPU:              'kandang/lampu',
+  MODE:               'kandang/mode',
+  SUHU:               'kandang/sensor/suhu',
+  GAS:                'kandang/sensor/gas',
+  THRESHOLD_TEMP_MIN: 'kandang/threshold/temp_min',
+  THRESHOLD_TEMP_MAX: 'kandang/threshold/temp_max',
+  THRESHOLD_GAS:      'kandang/threshold/gas',
+};
+
+// ── STATE ───────────────────────────────────────────────
+let client        = null;
+let currentMode   = 'auto';
+let chartTemp     = null;
+let chartGas      = null;
+let thresholds    = { tempMin: 30, tempMax: 35, gasMax: 300 };
+let activeWindow  = 12; // jam
+
+// Buffer semua data historis (timestamp + nilai)
+// format: { ts: Date, suhu: Number, gas: Number }
+const dataBuffer = [];
+const MAX_BUFFER = 10000; // simpan maksimal 10rb titik
+
+// ── UTILITAS WAKTU ──────────────────────────────────────
+function getTimeNow() {
+  return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+function fmtTime(date) {
+  return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── JAM DIGITAL ─────────────────────────────────────────
+function updateClock() {
+  const el = document.getElementById('live-clock');
+  if (el) el.textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── TOAST ───────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast-enter glass-card px-3 py-2 rounded-lg text-[13px] font-medium border border-outline-variant shadow-lg bg-white pointer-events-auto';
+  t.style.color = type === 'error' ? '#ba1a1a' : '#0058be';
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(() => t.remove(), 400); }, 3000);
+}
+
+// ── LOG AKTIVITAS ────────────────────────────────────────
+function addLog(icon, title, desc) {
+  const log = document.getElementById('activity-log');
+  const el  = document.createElement('div');
+  el.className = 'flex items-start gap-3 p-2.5 rounded-xl hover:bg-surface-container-low transition-colors';
+  el.innerHTML = `
+    <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+      <span class="material-symbols-outlined text-[18px]">${icon}</span>
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="flex justify-between items-baseline gap-2 mb-0.5">
+        <p class="text-[13px] font-bold text-on-surface truncate">${title}</p>
+        <span class="text-[11px] text-on-surface-variant shrink-0 font-mono">${getTimeNow()}</span>
+      </div>
+      <p class="text-[12px] text-on-surface-variant">${desc}</p>
+    </div>`;
+  log.prepend(el);
+  while (log.children.length > 10) log.removeChild(log.lastChild);
+}
+
+// ── MQTT STATUS BADGE ────────────────────────────────────
+function setMqttStatus(s) {
+  const badge = document.getElementById('mqtt-status-badge');
+  const text  = document.getElementById('mqtt-status-text');
+  const out   = document.getElementById('mqtt-ping-outer');
+  const inn   = document.getElementById('mqtt-ping-inner');
+  const map   = {
+    connecting: { cls: 'bg-yellow-50 text-yellow-700 border-yellow-300', dot: 'bg-yellow-400', lbl: 'Menghubungkan...' },
+    connected:  { cls: 'bg-secondary-container/20 text-secondary border-secondary/20', dot: 'bg-secondary', lbl: 'Terhubung' },
+    error:      { cls: 'bg-error-container text-error border-error/20', dot: 'bg-error', lbl: 'Terputus' },
+  };
+  const m = map[s] || map.connecting;
+  badge.className = `flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all text-[11px] md:text-label-sm font-medium ${m.cls}`;
+  text.textContent = m.lbl;
+  out.className    = `animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${m.dot}`;
+  inn.className    = `relative inline-flex rounded-full h-2 w-2 ${m.dot}`;
+}
+
+// ── CHART ────────────────────────────────────────────────
+const commonOpts = {
+  chart: {
+    type: 'area',
+    height: 220,
+    toolbar: { show: false },
+    zoom: { enabled: false },
+    fontFamily: 'Inter, sans-serif',
+    animations: { enabled: true, speed: 400 },
+    sparkline: { enabled: false },
+    redrawOnWindowResize: true,
+  },
+  fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0, stops: [0, 90, 100] } },
+  dataLabels: { enabled: false },
+  stroke: { curve: 'smooth', width: 2.5 },
+  xaxis: {
+    type: 'category',
+    categories: [],
+    labels: { style: { colors: '#727785', fontSize: '10px' }, rotate: -30, hideOverlappingLabels: true, maxHeight: 50 },
+    tickAmount: 6,
+  },
+  yaxis: { labels: { style: { colors: '#727785', fontSize: '10px' } } },
+  grid: { borderColor: '#e5eeff', strokeDashArray: 4, padding: { left: 4, right: 4 } },
+  tooltip: { x: { show: true } },
+  noData: { text: 'Menunggu data dari sensor...', style: { color: '#727785', fontFamily: 'Inter' } },
+  responsive: [
+    { breakpoint: 640, options: { chart: { height: 180 }, xaxis: { tickAmount: 4 } } }
+  ]
+};
+
+function initCharts() {
+  chartTemp = new ApexCharts(document.querySelector('#chart-temp-container'), {
+    ...commonOpts, series: [{ name: 'Suhu (°C)', data: [] }], colors: ['#0058be'],
+  });
+  chartTemp.render();
+
+  chartGas = new ApexCharts(document.querySelector('#chart-gas-container'), {
+    ...commonOpts, series: [{ name: 'Gas (ppm)', data: [] }], colors: ['#825100'],
+  });
+  chartGas.render();
+}
+
+// Ambil data buffer sesuai window jam yang dipilih
+function getFilteredData(windowHours) {
+  const cutoff = new Date(Date.now() - windowHours * 60 * 60 * 1000);
+  return dataBuffer.filter(d => d.ts >= cutoff);
+}
+
+// Render chart dari buffer sesuai window aktif
+function renderCharts() {
+  const filtered = getFilteredData(activeWindow);
+  const labels   = filtered.map(d => fmtTime(d.ts));
+  const suhuData = filtered.map(d => d.suhu);
+  const gasData  = filtered.map(d => d.gas);
+
+  if (chartTemp) {
+    chartTemp.updateOptions({ xaxis: { categories: labels } }, false, false);
+    chartTemp.updateSeries([{ name: 'Suhu (°C)', data: suhuData }], false);
+  }
+  if (chartGas) {
+    chartGas.updateOptions({ xaxis: { categories: labels } }, false, false);
+    chartGas.updateSeries([{ name: 'Gas (ppm)', data: gasData }], false);
+  }
+}
+
+// Tambah titik data baru ke buffer
+function pushData(suhu, gas) {
+  dataBuffer.push({ ts: new Date(), suhu, gas });
+  if (dataBuffer.length > MAX_BUFFER) dataBuffer.shift();
+  renderCharts();
+}
+
+// ── TIME FILTER BUTTONS ──────────────────────────────────
+function setupTimeFilter() {
+  const subtitle = document.getElementById('chart-subtitle');
+  document.querySelectorAll('.time-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeWindow = parseInt(btn.dataset.window);
+      if (subtitle) subtitle.textContent = `Data historis ${btn.dataset.label} terakhir`;
+      renderCharts();
+      showToast(`Grafik diperbarui: ${btn.dataset.label} terakhir`);
+    });
+  });
+}
+
+// ── SENSOR UI UPDATE ─────────────────────────────────────
+let lastSuhu = 0, lastGas = 0;
+
+function updateSensorUI(suhu, gas) {
+  lastSuhu = suhu; lastGas = gas;
+
+  // Suhu value
+  const elSuhu = document.getElementById('val-suhu');
+  if (elSuhu) elSuhu.textContent = suhu.toFixed(1);
+
+  // Gauge arc (r=42, circumference=264)
+  const arc = document.getElementById('gauge-suhu-arc');
+  if (arc) {
+    const pct    = Math.min(Math.max((suhu - 20) / (50 - 20), 0), 1);
+    const offset = 264 - pct * 264;
+    arc.style.strokeDashoffset = offset;
+    arc.style.stroke = suhu >= thresholds.tempMax ? '#ba1a1a' : suhu >= thresholds.tempMax - 2 ? '#f59e0b' : '#0058be';
+  }
+
+  // Gas value
+  const elGas = document.getElementById('val-gas');
+  if (elGas) elGas.textContent = gas.toFixed(0);
+
+  // Progress bar
+  const bar = document.getElementById('gas-bar');
+  if (bar) {
+    const pct = Math.min((gas / thresholds.gasMax) * 100, 100);
+    bar.style.width = pct + '%';
+    bar.style.backgroundColor = pct > 80 ? '#ba1a1a' : pct > 60 ? '#f59e0b' : '#825100';
+  }
+
+  updateAlert(suhu, gas);
+}
+
+function updateAlert(suhu, gas) {
+  const box   = document.getElementById('alert-box');
+  const title = document.getElementById('alert-title');
+  const msg   = document.getElementById('alert-msg');
+  const icon  = document.getElementById('alert-icon');
+  if (!box) return;
+  if (suhu >= thresholds.tempMax || gas >= thresholds.gasMax) {
+    box.className = 'rounded-xl p-3 md:p-4 flex items-start gap-3 border shadow-sm bg-error-container text-on-error-container border-error/20 transition-all duration-500';
+    if (icon) icon.textContent = 'warning';
+    title.textContent = '⚠️ Peringatan Kritis!';
+    msg.textContent   = `${suhu >= thresholds.tempMax ? 'Suhu melebihi batas (' + suhu.toFixed(1) + '°C). ' : ''}${gas >= thresholds.gasMax ? 'Gas melebihi batas (' + gas.toFixed(0) + ' ppm).' : ''}`;
+  } else if (suhu >= thresholds.tempMax - 2 || gas >= thresholds.gasMax * 0.8) {
+    box.className = 'rounded-xl p-3 md:p-4 flex items-start gap-3 border shadow-sm bg-yellow-50 text-yellow-800 border-yellow-200 transition-all duration-500';
+    if (icon) icon.textContent = 'warning_amber';
+    title.textContent = '⚠️ Perhatian';
+    msg.textContent   = `Parameter mendekati batas ambang. Suhu: ${suhu.toFixed(1)}°C, Gas: ${gas.toFixed(0)} ppm.`;
+  } else {
+    box.className = 'rounded-xl p-3 md:p-4 flex items-start gap-3 border shadow-sm bg-secondary-container/20 text-secondary border-secondary/20 transition-all duration-500';
+    if (icon) icon.textContent = 'check_circle';
+    title.textContent = '✅ Sistem Normal';
+    msg.textContent   = `Semua parameter normal. Suhu: ${suhu.toFixed(1)}°C, Gas: ${gas.toFixed(0)} ppm.`;
+  }
+}
+
+// ── DEVICE STATE ─────────────────────────────────────────
+function applyDeviceState(device, isOn) {
+  const toggle    = document.getElementById('toggle-' + device);
+  const label     = document.getElementById('label-' + device);
+  const icon      = document.getElementById('icon-' + device);
+  const container = document.getElementById('container-' + device);
+  if (!toggle) return;
+
+  const knob = toggle.querySelector('div');
+  if (isOn) {
+    toggle.classList.remove('bg-surface-variant'); toggle.classList.add('bg-primary');
+    knob.classList.remove('left-1'); knob.classList.add('right-1');
+    label.textContent = 'Aktif'; label.className = 'text-[11px] text-primary font-medium';
+    if (device === 'kipas') {
+      icon.className = 'material-symbols-outlined text-primary animate-spin'; icon.style.animationDuration = '2s';
+      container.className = 'bg-primary/5 rounded-xl p-3 md:p-4 flex items-center justify-between border border-primary/20 transition-all';
+    } else {
+      icon.className = 'material-symbols-outlined text-yellow-500';
+      container.className = 'bg-yellow-50 rounded-xl p-3 md:p-4 flex items-center justify-between border border-yellow-200 transition-all';
+    }
+  } else {
+    toggle.classList.remove('bg-primary'); toggle.classList.add('bg-surface-variant');
+    knob.classList.remove('right-1'); knob.classList.add('left-1');
+    label.textContent = 'Mati'; label.className = 'text-[11px] text-on-surface-variant font-medium';
+    icon.className = 'material-symbols-outlined text-on-surface-variant';
+    if (device === 'kipas') icon.classList.remove('animate-spin');
+    container.className = 'bg-surface rounded-xl p-3 md:p-4 flex items-center justify-between border border-outline-variant/50 transition-all';
+  }
+
+  toggle.classList.toggle('opacity-50', currentMode === 'auto');
+  toggle.classList.toggle('cursor-not-allowed', currentMode === 'auto');
+  toggle.classList.toggle('cursor-pointer', currentMode !== 'auto');
+}
+
+// ── MODE AUTO / MANUAL ───────────────────────────────────
+// Flag: true = sedang proses update dari MQTT (bukan dari user)
+let mqttModeIncoming = false;
+
+// updateModeUI: hanya update tampilan, TIDAK publish
+function updateModeUI(mode) {
+  currentMode = mode;
+  const btnM  = document.getElementById('btn-manual');
+  const btnA  = document.getElementById('btn-auto');
+  const info  = document.getElementById('mode-info-text');
+  const isAuto = mode === 'auto';
+
+  if (isAuto) {
+    btnA.className = 'px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-on-primary shadow-sm transition-all';
+    btnM.className = 'px-3 py-1 rounded-full text-[10px] font-semibold text-on-surface-variant transition-all';
+    if (info) info.textContent = 'Mode Otomatis Aktif. Kontrol manual dinonaktifkan.';
+  } else {
+    btnM.className = 'px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-on-primary shadow-sm transition-all';
+    btnA.className = 'px-3 py-1 rounded-full text-[10px] font-semibold text-on-surface-variant transition-all';
+    if (info) info.textContent = 'Mode Manual Aktif. Kontrol manual diizinkan.';
+  }
+
+  ['kipas', 'lampu'].forEach(d => {
+    const t = document.getElementById('toggle-' + d);
+    if (!t) return;
+    t.classList.toggle('opacity-50',        isAuto);
+    t.classList.toggle('cursor-not-allowed', isAuto);
+    t.classList.toggle('cursor-pointer',    !isAuto);
+  });
+}
+
+// setModeByUser: dipanggil HANYA saat user klik tombol mode
+function setModeByUser(mode) {
+  if (currentMode === mode) return; // Tidak berubah, abaikan
+
+  updateModeUI(mode);
+  mqttPublish(TOPICS.MODE, mode); // Publish ke ESP32
+  addLog('toggle_on', `Mode ${mode === 'auto' ? 'Otomatis' : 'Manual'} Aktif`, 'Diubah oleh pengguna');
+  showToast(mode === 'auto' ? 'Mode Otomatis Aktif' : 'Mode Manual Aktif');
+}
+
+// ── SAVE SETTINGS ────────────────────────────────────────
+function saveSettings() {
+  const tempMin = parseFloat(document.getElementById('setting-temp-min').value);
+  const tempMax = parseFloat(document.getElementById('setting-temp-max').value);
+  const gasMax  = parseInt(document.getElementById('setting-gas-max').value);
+
+  if (tempMin >= tempMax) { showToast('Suhu Min harus lebih kecil dari Suhu Max', 'error'); return; }
+  if (isNaN(tempMin) || isNaN(tempMax) || isNaN(gasMax)) { showToast('Nilai tidak valid', 'error'); return; }
+
+  thresholds = { tempMin, tempMax, gasMax };
+
+  const dMin = document.getElementById('dashboard-temp-min');
+  const dMax = document.getElementById('dashboard-temp-max');
+  const dGas = document.getElementById('dashboard-gas-max');
+  const lGas = document.getElementById('gas-max-label');
+
+  if (dMin) dMin.textContent = `${tempMin}°C`;
+  if (dMax) dMax.textContent = `${tempMax}°C`;
+  if (dGas) dGas.innerHTML   = `${gasMax}<span class="text-[10px] font-normal ml-0.5">ppm</span>`;
+  if (lGas) lGas.textContent = gasMax;
+
+  mqttPublish(TOPICS.THRESHOLD_TEMP_MIN, tempMin.toString());
+  mqttPublish(TOPICS.THRESHOLD_TEMP_MAX, tempMax.toString());
+  mqttPublish(TOPICS.THRESHOLD_GAS,      gasMax.toString());
+
+  addLog('tune', 'Pengaturan diperbarui', `Suhu: ${tempMin}–${tempMax}°C, Gas max: ${gasMax} ppm`);
+  showToast('Pengaturan tersimpan & disinkronkan ke ESP32 ✓');
+}
+
+// ── NAVIGASI ─────────────────────────────────────────────
+function navigateTo(sec) {
+  ['dashboard', 'pengaturan'].forEach(s => {
+    const sEl  = document.getElementById('section-' + s);
+    const nEl  = document.getElementById('nav-' + s);
+    const mEl  = document.getElementById('mob-' + s);
+    const active = s === sec;
+
+    if (sEl) sEl.classList.toggle('hidden', !active);
+
+    if (nEl) {
+      nEl.className = active
+        ? 'nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium bg-surface-container text-primary overflow-hidden'
+        : 'nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-colors text-on-surface-variant hover:bg-surface-container-low overflow-hidden';
+    }
+    if (mEl) {
+      mEl.className = active
+        ? 'flex flex-col items-center gap-0.5 px-6 py-2 text-primary rounded-xl min-w-[64px]'
+        : 'flex flex-col items-center gap-0.5 px-6 py-2 text-on-surface-variant rounded-xl min-w-[64px]';
+    }
+  });
+  // Scroll ke atas saat pindah section
+  const wrapper = document.getElementById('main-wrapper');
+  if (wrapper) wrapper.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── MQTT ─────────────────────────────────────────────────
+function mqttPublish(topic, payload) {
+  if (client && client.connected) {
+    client.publish(topic, payload);
+    console.log(`[MQTT] → ${topic}: ${payload}`);
+  } else {
+    console.warn(`[MQTT] Belum terhubung. ${topic} = ${payload}`);
+    showToast('MQTT belum terhubung.', 'error');
+  }
+}
+
+function initMQTT(host, opts) {
+  if (client) { try { client.end(true); } catch(e){} client = null; }
+  setMqttStatus('connecting');
+  addLog('wifi', 'Menghubungkan...', `Host: ${host.substring(0, 40)}...`);
+
+  try { client = mqtt.connect(host, opts); }
+  catch (e) { setMqttStatus('error'); showToast('Gagal koneksi: ' + e.message, 'error'); return; }
+
+  client.on('connect', () => {
+    setMqttStatus('connected');
+    showToast('Terhubung ke MQTT HiveMQ ✓');
+    addLog('check_circle', 'MQTT Terhubung', 'Berhasil terhubung ke HiveMQ Cloud');
+    client.subscribe([TOPICS.SUHU, TOPICS.GAS, TOPICS.KIPAS, TOPICS.LAMPU, TOPICS.MODE], err => {
+      if (err) showToast('Gagal subscribe: ' + err.message, 'error');
+    });
+  });
+
+  client.on('message', (topic, payload) => {
+    const val = payload.toString().trim();
+    switch (topic) {
+      case TOPICS.SUHU: {
+        const s = parseFloat(val);
+        if (!isNaN(s)) { updateSensorUI(s, lastGas); pushData(s, lastGas); }
+        break;
+      }
+      case TOPICS.GAS: {
+        const g = parseFloat(val);
+        if (!isNaN(g)) { updateSensorUI(lastSuhu, g); pushData(lastSuhu, g); }
+        break;
+      }
+      case TOPICS.KIPAS:
+        applyDeviceState('kipas', val === '1' || val.toLowerCase() === 'on');
+        break;
+      case TOPICS.LAMPU:
+        applyDeviceState('lampu', val === '1' || val.toLowerCase() === 'on');
+        break;
+      case TOPICS.MODE:
+        // Terima mode dari MQTT (dari ESP32 atau broker)
+        // Hanya update UI, JANGAN publish balik — anti feedback loop
+        if (val === 'auto' || val === 'manual') {
+          if (currentMode !== val) {
+            // Silent update: update tampilan tapi tidak toast, tidak log, tidak publish
+            updateModeUI(val);
+            console.log(`[MQTT] Mode sync dari broker: ${val}`);
+          }
+        }
+        break;
+    }
+  });
+
+  client.on('error',     err => { setMqttStatus('error'); addLog('error', 'Koneksi gagal', err.message); console.error('[MQTT]', err); });
+  client.on('close',     ()  => { setMqttStatus('error'); });
+  client.on('reconnect', ()  => { setMqttStatus('connecting'); });
+}
+
+function reconnectMQTT() {
+  const host = document.getElementById('setting-mqtt-host').value.trim() || MQTT_CONFIG.host;
+  const user = document.getElementById('setting-mqtt-user').value.trim() || MQTT_CONFIG.options.username;
+  const pass = document.getElementById('setting-mqtt-pass').value.trim() || MQTT_CONFIG.options.password;
+  initMQTT(host, { ...MQTT_CONFIG.options, username: user, password: pass, clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8) });
+}
+
+function reconnectMQTT() {
+  const host = document.getElementById('setting-mqtt-host').value.trim() || MQTT_CONFIG.host;
+  const user = document.getElementById('setting-mqtt-user').value.trim() || MQTT_CONFIG.options.username;
+  const pass = document.getElementById('setting-mqtt-pass').value.trim() || MQTT_CONFIG.options.password;
+  initMQTT(host, { ...MQTT_CONFIG.options, username: user, password: pass, clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8) });
+}
+
+// ══════════════════════════════════════════════════
+// DOMContentLoaded — Bootstrap semua
+// ══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Waktu log awal
+  const li = document.getElementById('log-time-init');
+  if (li) li.textContent = getTimeNow();
+
+  // Isi form MQTT
+  const h = document.getElementById('setting-mqtt-host');
+  const u = document.getElementById('setting-mqtt-user');
+  const p = document.getElementById('setting-mqtt-pass');
+  if (h) h.value = MQTT_CONFIG.host;
+  if (u) u.value = MQTT_CONFIG.options.username;
+  if (p) p.value = MQTT_CONFIG.options.password;
+
+  // Init charts
+  initCharts();
+
+  // Time filter
+  setupTimeFilter();
+
+  // Init MQTT
+  initMQTT(MQTT_CONFIG.host, MQTT_CONFIG.options);
+
+  // Navigasi desktop + mobile
+  ['dashboard', 'pengaturan'].forEach(s => {
+    const n = document.getElementById('nav-' + s);
+    const m = document.getElementById('mob-' + s);
+    if (n) n.addEventListener('click', e => { e.preventDefault(); navigateTo(s); });
+    if (m) m.addEventListener('click', e => { e.preventDefault(); navigateTo(s); });
+  });
+
+  // Mode switcher
+  const ms = document.getElementById('mode-switcher');
+  if (ms) ms.addEventListener('click', () => setModeByUser(currentMode === 'auto' ? 'manual' : 'auto'));
+
+  // Toggle Kipas
+  const tk = document.getElementById('toggle-kipas');
+  if (tk) tk.addEventListener('click', () => {
+    if (currentMode === 'auto') { showToast('Nonaktifkan Mode Auto dulu', 'error'); return; }
+    const isOn = tk.classList.contains('bg-primary');
+    applyDeviceState('kipas', !isOn);
+    mqttPublish(TOPICS.KIPAS, !isOn ? '1' : '0');
+    addLog('mode_fan', `Kipas ${!isOn ? 'Dinyalakan' : 'Dimatikan'}`, 'Kontrol manual');
+    showToast(`Kipas Exhaust ${!isOn ? 'Dinyalakan ✓' : 'Dimatikan'}`);
+  });
+
+  // Toggle Lampu
+  const tl = document.getElementById('toggle-lampu');
+  if (tl) tl.addEventListener('click', () => {
+    if (currentMode === 'auto') { showToast('Nonaktifkan Mode Auto dulu', 'error'); return; }
+    const isOn = tl.classList.contains('bg-primary');
+    applyDeviceState('lampu', !isOn);
+    mqttPublish(TOPICS.LAMPU, !isOn ? '1' : '0');
+    addLog('lightbulb', `Lampu ${!isOn ? 'Dinyalakan' : 'Dimatikan'}`, 'Kontrol manual');
+    showToast(`Lampu Pemanas ${!isOn ? 'Dinyalakan ✓' : 'Dimatikan'}`);
+  });
+
+  // Simpan pengaturan
+  const bs = document.getElementById('btn-save-settings');
+  if (bs) bs.addEventListener('click', saveSettings);
+
+  // Resize chart saat window resize (penting untuk tablet rotation)
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (chartTemp) chartTemp.render();
+      if (chartGas)  chartGas.render();
+    }, 300);
+  });
+});
+</script>
+</body>
+</html>
