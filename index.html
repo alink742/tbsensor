@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <title>Sistem Monitoring Kandang Anak Ayam</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -67,9 +66,7 @@ tailwind.config = {
         "surface-tint": "#005ac2",
         "on-background": "#0b1c30"
       },
-      fontFamily: {
-        sans: ["Inter", "sans-serif"]
-      },
+      fontFamily: { sans: ["Inter", "sans-serif"] },
       fontSize: {
         "label-sm":   ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }],
         "headline-md":["24px", { lineHeight: "32px", fontWeight: "600" }],
@@ -86,12 +83,10 @@ tailwind.config = {
 </script>
 
 <style>
-  /* ─── BASE ─────────────────────────────────────── */
   * { box-sizing: border-box; }
   html, body { height: 100%; overflow-x: hidden; }
   body { font-family: 'Inter', sans-serif; background: #f8f9ff; }
 
-  /* ─── GLASS CARD ────────────────────────────────── */
   .glass-card {
     background: rgba(255,255,255,0.92);
     backdrop-filter: blur(20px);
@@ -100,61 +95,35 @@ tailwind.config = {
     box-shadow: 0 4px 24px rgba(0,88,190,0.06);
   }
 
-  /* ─── SIDEBAR ───────────────────────────────────── */
-  #sidebar {
-    width: 72px;
-    transition: width 0.3s ease;
-    overflow: hidden;
-  }
+  #sidebar { width: 72px; transition: width 0.3s ease; overflow: hidden; }
   #sidebar .label-text { display: none; white-space: nowrap; }
-
   @media (min-width: 1024px) {
     #sidebar { width: 240px; }
     #sidebar .label-text { display: inline; }
     #sidebar .brand-name { display: block; }
   }
 
-  /* ─── SCROLLBAR ─────────────────────────────────── */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #c2c6d6; border-radius: 99px; }
 
-  /* ─── CHART TIME FILTER ACTIVE ──────────────────── */
-  .time-btn.active {
-    background: #ffffff;
-    color: #0b1c30;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
-    font-weight: 600;
-  }
-  .time-btn {
-    transition: all 0.2s ease;
-    cursor: pointer;
-  }
-  .time-btn:not(.active):hover {
-    background: rgba(0,88,190,0.06);
-    color: #0058be;
-  }
+  .time-btn.active { background: #ffffff; color: #0b1c30; box-shadow: 0 1px 4px rgba(0,0,0,0.12); font-weight: 600; }
+  .time-btn { transition: all 0.2s ease; cursor: pointer; }
+  .time-btn:not(.active):hover { background: rgba(0,88,190,0.06); color: #0058be; }
 
-  /* ─── TOAST ANIMATION ────────────────────────────── */
   @keyframes slideUp {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   .toast-enter { animation: slideUp 0.25s ease forwards; }
 
-  /* ─── SAFE AREA (notch/home bar) ─────────────────── */
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
 
-  /* ─── GAUGE CIRCLE ───────────────────────────────── */
-  .gauge-track  { stroke: #d3e4fe; }
-  .gauge-fill   { transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease; }
+  .gauge-track { stroke: #d3e4fe; }
+  .gauge-fill  { transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease; }
 
-  /* ─── RESPONSIVE DISPLAY-LG ON SMALL SCREEN ─────── */
-  @media (max-width: 360px) {
-    .val-display { font-size: 36px !important; }
-  }
+  @media (max-width: 360px) { .val-display { font-size: 36px !important; } }
 
-  /* ─── APEXCHARTS ──────────────────────────────────── */
   .apexcharts-tooltip {
     background: rgba(255,255,255,0.97) !important;
     border: 1px solid #e5eeff !important;
@@ -172,7 +141,6 @@ tailwind.config = {
   .apexcharts-tooltip-series-group { padding: 4px 12px !important; }
   .apexcharts-text { font-family: 'Inter', sans-serif !important; }
 
-  /* ─── PREVENT HORIZONTAL OVERFLOW ON MOBILE ──────── */
   .main-content { min-width: 0; max-width: 100%; }
   .chart-wrapper { min-height: 200px; width: 100%; overflow: hidden; }
 </style>
@@ -180,16 +148,11 @@ tailwind.config = {
 
 <body class="text-on-background flex h-full">
 
-<!-- ═══════════════════════════════════════════════════
-     TOAST
-══════════════════════════════════════════════════════ -->
+<!-- TOAST -->
 <div class="fixed bottom-20 right-3 md:bottom-6 md:right-6 z-[999] flex flex-col gap-2 pointer-events-none" id="toast-container"></div>
 
-<!-- ═══════════════════════════════════════════════════
-     DESKTOP SIDEBAR (hidden on mobile)
-══════════════════════════════════════════════════════ -->
+<!-- DESKTOP SIDEBAR -->
 <aside id="sidebar" class="hidden md:flex flex-col fixed inset-y-0 left-0 bg-surface-container-lowest border-r border-outline-variant z-30 shrink-0">
-  <!-- Brand -->
   <div class="flex items-center gap-3 px-4 py-5 border-b border-outline-variant overflow-hidden">
     <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary shrink-0">
       <span class="material-symbols-outlined text-[20px]">nest_eco_leaf</span>
@@ -199,10 +162,8 @@ tailwind.config = {
       <p class="text-[11px] text-on-surface-variant truncate">Monitoring Kandang</p>
     </div>
   </div>
-
-  <!-- Nav -->
   <nav class="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
-    <a href="#" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-colors overflow-hidden">
+    <a href="#" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium bg-surface-container text-primary overflow-hidden">
       <span class="material-symbols-outlined text-xl shrink-0">dashboard</span>
       <span class="label-text text-label-md">Dashboard</span>
     </a>
@@ -211,8 +172,6 @@ tailwind.config = {
       <span class="label-text text-label-md">Pengaturan</span>
     </a>
   </nav>
-
-  <!-- User -->
   <div class="p-3 border-t border-outline-variant overflow-hidden">
     <div class="flex items-center gap-3 px-2 py-2 overflow-hidden">
       <span class="material-symbols-outlined text-xl shrink-0 text-on-surface-variant">account_circle</span>
@@ -224,12 +183,10 @@ tailwind.config = {
   </div>
 </aside>
 
-<!-- ═══════════════════════════════════════════════════
-     MAIN WRAPPER
-══════════════════════════════════════════════════════ -->
+<!-- MAIN WRAPPER -->
 <div class="flex-1 flex flex-col md:pl-[72px] lg:pl-[240px] transition-all duration-300 min-w-0 h-full overflow-y-auto" id="main-wrapper">
 
-  <!-- ── TOPBAR ─────────────────────────────────────── -->
+  <!-- TOPBAR -->
   <header class="glass-card sticky top-0 z-20 px-4 md:px-6 py-3 border-b border-outline-variant shrink-0">
     <div class="flex justify-between items-center gap-3">
       <div class="min-w-0">
@@ -241,12 +198,10 @@ tailwind.config = {
         </p>
       </div>
       <div class="flex items-center gap-2 md:gap-4 shrink-0">
-        <!-- Jam -->
         <div class="hidden sm:block text-right">
           <div class="text-[18px] md:text-headline-md font-bold text-on-surface tabular-nums" id="live-clock">--:--</div>
         </div>
         <div class="h-6 w-px bg-outline-variant hidden sm:block"></div>
-        <!-- MQTT Badge -->
         <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all text-[11px] md:text-label-sm font-medium" id="mqtt-status-badge">
           <span class="relative flex h-2 w-2 shrink-0">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" id="mqtt-ping-outer"></span>
@@ -258,10 +213,10 @@ tailwind.config = {
     </div>
   </header>
 
-  <!-- ── MAIN CONTENT ────────────────────────────────── -->
+  <!-- MAIN CONTENT -->
   <main class="flex-1 p-3 md:p-6 space-y-4 md:space-y-6 main-content pb-20 md:pb-6 w-full max-w-[1400px] mx-auto">
 
-    <!-- ══════════ SECTION DASHBOARD ══════════ -->
+    <!-- SECTION DASHBOARD -->
     <div id="section-dashboard" class="space-y-4 md:space-y-6">
 
       <!-- ALERT -->
@@ -339,14 +294,12 @@ tailwind.config = {
         <div class="glass-card rounded-2xl p-4 md:p-6 flex flex-col sm:col-span-2 lg:col-span-1">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-[15px] font-bold text-on-surface">Kontrol Sistem</h3>
-            <!-- Mode Toggle -->
             <div id="mode-switcher" class="bg-surface-container-low rounded-full p-1 flex items-center border border-outline-variant/50 cursor-pointer select-none">
               <button id="btn-manual" class="px-3 py-1 rounded-full text-[10px] font-semibold text-on-surface-variant transition-all">Manual</button>
               <button id="btn-auto"   class="px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-on-primary shadow-sm transition-all">Auto</button>
             </div>
           </div>
           <div class="grid grid-cols-1 gap-3 flex-1">
-            <!-- Kipas -->
             <div id="container-kipas" class="bg-primary/5 rounded-xl p-3 md:p-4 flex items-center justify-between border border-primary/20 transition-all">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -361,7 +314,6 @@ tailwind.config = {
                 <div class="w-4 h-4 bg-white rounded-full absolute top-1 right-1 shadow transition-all"></div>
               </div>
             </div>
-            <!-- Lampu -->
             <div id="container-lampu" class="bg-surface rounded-xl p-3 md:p-4 flex items-center justify-between border border-outline-variant/50 transition-all">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
@@ -419,19 +371,13 @@ tailwind.config = {
         <div class="glass-card rounded-2xl p-4 md:p-6 flex flex-col lg:col-span-3">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
             <div>
-              <h3 class="text-[15px] font-bold text-on-surface">Tren Historis</h3>
-              <p class="text-[11px] text-on-surface-variant mt-0.5" id="chart-subtitle">Data historis 12 jam terakhir</p>
+              <h3 class="text-[15px] font-bold text-on-surface">Tren Historis Hari Ini</h3>
+              <p class="text-[11px] text-on-surface-variant mt-0.5" id="chart-subtitle">Data per jam — diperbarui tiap 60 detik</p>
             </div>
-            <!-- Time Filter Buttons -->
-            <div class="flex bg-surface-container-low rounded-lg p-1 border border-outline-variant/30 text-[11px] gap-0.5 self-start sm:self-auto">
-              <button class="time-btn px-2.5 py-1.5 rounded-md text-on-surface-variant" data-window="1"  data-label="1 Jam">1 Jam</button>
-              <button class="time-btn px-2.5 py-1.5 rounded-md text-on-surface-variant" data-window="3"  data-label="3 Jam">3 Jam</button>
-              <button class="time-btn active px-2.5 py-1.5 rounded-md"                 data-window="12" data-label="12 Jam">12 Jam</button>
-              <button class="time-btn px-2.5 py-1.5 rounded-md text-on-surface-variant" data-window="24" data-label="24 Jam">24 Jam</button>
-            </div>
+            <!-- Tanggal chart -->
+            <div class="text-[11px] text-on-surface-variant font-mono bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant/30" id="chart-date-label">--</div>
           </div>
 
-          <!-- Charts: stack on mobile, side-by-side on lg -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
             <div class="flex flex-col">
               <h4 class="text-[12px] font-bold text-on-surface mb-1">Tren Suhu (°C)</h4>
@@ -471,7 +417,7 @@ tailwind.config = {
 
     </div><!-- end section-dashboard -->
 
-    <!-- ══════════ SECTION PENGATURAN ══════════ -->
+    <!-- SECTION PENGATURAN -->
     <div id="section-pengaturan" class="hidden space-y-4 md:space-y-6">
       <div class="glass-card rounded-2xl p-4 md:p-8">
         <h2 class="text-[20px] md:text-headline-md font-bold text-on-surface mb-6">Pengaturan Sistem</h2>
@@ -508,7 +454,7 @@ tailwind.config = {
           <!-- Threshold Config -->
           <div class="space-y-4">
             <h3 class="text-[14px] font-bold text-on-surface border-b border-outline-variant pb-2">Konfigurasi Batas Ambang</h3>
-            <p class="text-[12px] text-on-surface-variant">Nilai akan dikirimkan ke ESP32 via MQTT setelah disimpan.</p>
+            <p class="text-[12px] text-on-surface-variant">Nilai akan dikirimkan ke ESP32 via MQTT setelah disimpan. Nilai tersimpan permanen di browser.</p>
             <div class="grid gap-4">
               <div>
                 <label class="block text-[12px] font-semibold text-on-surface-variant mb-1.5">Batas Suhu Minimal (°C)</label>
@@ -516,7 +462,7 @@ tailwind.config = {
                   <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[18px]">device_thermostat</span>
                   </span>
-                  <input id="setting-temp-min" type="number" value="20"
+                  <input id="setting-temp-min" type="number"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
                 </div>
               </div>
@@ -526,7 +472,7 @@ tailwind.config = {
                   <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[18px]">device_thermostat</span>
                   </span>
-                  <input id="setting-temp-max" type="number" value="25"
+                  <input id="setting-temp-max" type="number"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
                 </div>
               </div>
@@ -536,10 +482,15 @@ tailwind.config = {
                   <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[18px]">air</span>
                   </span>
-                  <input id="setting-gas-max" type="number" value="20"
+                  <input id="setting-gas-max" type="number"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
                 </div>
               </div>
+            </div>
+            <!-- Info threshold aktif -->
+            <div class="bg-surface-container-low rounded-xl p-3 border border-outline-variant/50 text-[12px] text-on-surface-variant flex items-start gap-2">
+              <span class="material-symbols-outlined text-[15px] shrink-0 mt-0.5 text-primary">info</span>
+              <span>Threshold aktif saat ini: Suhu Min <strong id="info-temp-min">--</strong>°C, Suhu Max <strong id="info-temp-max">--</strong>°C, Gas Max <strong id="info-gas-max">--</strong> ppm</span>
             </div>
           </div>
 
@@ -553,11 +504,9 @@ tailwind.config = {
     </div><!-- end section-pengaturan -->
 
   </main>
-</div><!-- end main-wrapper -->
+</div>
 
-<!-- ═══════════════════════════════════════════════════
-     MOBILE BOTTOM NAV
-══════════════════════════════════════════════════════ -->
+<!-- MOBILE BOTTOM NAV -->
 <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around border-t border-outline-variant bg-surface-container-lowest glass-card pb-safe pt-1">
   <a id="mob-dashboard" href="#" class="flex flex-col items-center gap-0.5 px-6 py-2 text-primary rounded-xl min-w-[64px]">
     <span class="material-symbols-outlined text-[24px]">dashboard</span>
@@ -569,16 +518,17 @@ tailwind.config = {
   </a>
 </nav>
 
-<!-- ═══════════════════════════════════════════════════
-     SCRIPT UTAMA
-══════════════════════════════════════════════════════ -->
+<!-- ═══════════════ SCRIPT UTAMA ═══════════════ -->
 <script>
 
+// ─────────────────────────────────────────────────────
+// KONFIGURASI MQTT — ganti sesuai cluster Anda
+// ─────────────────────────────────────────────────────
 const MQTT_CONFIG = {
-  host: 'wss://f6b15adb831b4e899fcc2748d294be88.s1.eu.hivemq.cloud:8884/mqtt',  // ← Ganti CLUSTER_ID
+  host: 'wss://f6b15adb831b4e899fcc2748d294be88.s1.eu.hivemq.cloud:8884/mqtt',
   options: {
-    username: 'nyambek',   // ← Ganti
-    password: 'Sensor_123',   // ← Ganti
+    username: 'nyambek',
+    password: 'Sensor_123',
     clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8),
     keepalive: 60,
     reconnectPeriod: 5000,
@@ -598,34 +548,78 @@ const TOPICS = {
   THRESHOLD_GAS:      'kandang/threshold/gas',
 };
 
-// ── STATE ───────────────────────────────────────────────
-let client        = null;
-let currentMode   = 'auto';
-let chartTemp     = null;
-let chartGas      = null;
+// ─────────────────────────────────────────────────────
+// THRESHOLD — STORAGE KEY & DEFAULT YANG BENAR
+// ─────────────────────────────────────────────────────
+// PENTING: Gunakan key yang unik agar tidak konflik dengan
+// nilai lama (30/300) yang mungkin tersimpan di localStorage
+const THRESHOLD_STORAGE_KEY = 'smartfarm_thresholds_v2';
+const THRESHOLD_DEFAULTS = { tempMin: 20, tempMax: 25, gasMax: 20 };
 
-// Load threshold dari localStorage, fallback ke default 20/25/20
-const _savedThresholds = (() => {
-  try { return JSON.parse(localStorage.getItem('smartfarm_thresholds')); } catch(e) { return null; }
-})();
-let thresholds = _savedThresholds || { tempMin: 20, tempMax: 25, gasMax: 20 };
-
-let activeWindow  = 12; // jam
-
-// Buffer semua data historis (timestamp + nilai)
-// format: { ts: Date, suhu: Number, gas: Number }
-const dataBuffer = [];
-const MAX_BUFFER = 10000; // simpan maksimal 10rb titik
-
-// ── UTILITAS WAKTU ──────────────────────────────────────
-function getTimeNow() {
-  return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+/**
+ * Load threshold dari localStorage.
+ * Jika tidak ada atau format tidak valid → pakai default.
+ * Gunakan key v2 supaya nilai lama (30/300 dari key lama) tidak terbaca.
+ */
+function loadThresholds() {
+  try {
+    const raw = localStorage.getItem(THRESHOLD_STORAGE_KEY);
+    if (!raw) return { ...THRESHOLD_DEFAULTS };
+    const parsed = JSON.parse(raw);
+    // Validasi minimal: semua field harus angka
+    if (
+      typeof parsed.tempMin === 'number' &&
+      typeof parsed.tempMax === 'number' &&
+      typeof parsed.gasMax  === 'number' &&
+      parsed.tempMin < parsed.tempMax
+    ) {
+      return parsed;
+    }
+    return { ...THRESHOLD_DEFAULTS };
+  } catch (e) {
+    return { ...THRESHOLD_DEFAULTS };
+  }
 }
-function fmtTime(date) {
-  return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+function saveThresholds(t) {
+  try { localStorage.setItem(THRESHOLD_STORAGE_KEY, JSON.stringify(t)); } catch(e) {}
 }
 
-// ── JAM DIGITAL ─────────────────────────────────────────
+// State threshold aktif
+let thresholds = loadThresholds();
+
+// ─────────────────────────────────────────────────────
+// STATE GLOBAL
+// ─────────────────────────────────────────────────────
+let client      = null;
+let currentMode = 'auto';
+let chartTemp   = null;
+let chartGas    = null;
+
+// Nilai sensor terakhir (pair: suhu + gas harus dari waktu yang sama)
+let pendingSuhu = null;
+let pendingGas  = null;
+let lastSuhu    = 0;
+let lastGas     = 0;
+
+/**
+ * BUFFER HARIAN: array of { hour: string "HH:00", suhu: number, gas: number }
+ * Setiap jam hanya ada SATU entry (average dari semua data di jam itu).
+ * Buffer dibersihkan otomatis setiap hari baru.
+ */
+let dailyBuffer = []; // [ { hour, suhu, gas } ]
+let bufferDate  = new Date().toDateString(); // tanggal saat buffer dibuat
+
+// Raw accumulator untuk rata-rata per jam
+// { "HH": { sumSuhu, sumGas, count } }
+let hourAccum = {};
+
+// Chart hanya di-render ulang tiap 60 detik (bukan tiap pesan)
+let chartRenderTimer = null;
+
+// ─────────────────────────────────────────────────────
+// JAM DIGITAL
+// ─────────────────────────────────────────────────────
 function updateClock() {
   const el = document.getElementById('live-clock');
   if (el) el.textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -633,7 +627,13 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// ── TOAST ───────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// UTILITAS
+// ─────────────────────────────────────────────────────
+function getTimeNow() {
+  return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 function showToast(msg, type = 'info') {
   const c = document.getElementById('toast-container');
   const t = document.createElement('div');
@@ -644,7 +644,6 @@ function showToast(msg, type = 'info') {
   setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(() => t.remove(), 400); }, 3000);
 }
 
-// ── LOG AKTIVITAS ────────────────────────────────────────
 function addLog(icon, title, desc) {
   const log = document.getElementById('activity-log');
   const el  = document.createElement('div');
@@ -664,13 +663,15 @@ function addLog(icon, title, desc) {
   while (log.children.length > 10) log.removeChild(log.lastChild);
 }
 
-// ── MQTT STATUS BADGE ────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// MQTT STATUS BADGE
+// ─────────────────────────────────────────────────────
 function setMqttStatus(s) {
   const badge = document.getElementById('mqtt-status-badge');
   const text  = document.getElementById('mqtt-status-text');
   const out   = document.getElementById('mqtt-ping-outer');
   const inn   = document.getElementById('mqtt-ping-inner');
-  const map   = {
+  const map = {
     connecting: { cls: 'bg-yellow-50 text-yellow-700 border-yellow-300', dot: 'bg-yellow-400', lbl: 'Menghubungkan...' },
     connected:  { cls: 'bg-secondary-container/20 text-secondary border-secondary/20', dot: 'bg-secondary', lbl: 'Terhubung' },
     error:      { cls: 'bg-error-container text-error border-error/20', dot: 'bg-error', lbl: 'Terputus' },
@@ -678,11 +679,19 @@ function setMqttStatus(s) {
   const m = map[s] || map.connecting;
   badge.className = `flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all text-[11px] md:text-label-sm font-medium ${m.cls}`;
   text.textContent = m.lbl;
-  out.className    = `animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${m.dot}`;
-  inn.className    = `relative inline-flex rounded-full h-2 w-2 ${m.dot}`;
+  out.className = `animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${m.dot}`;
+  inn.className = `relative inline-flex rounded-full h-2 w-2 ${m.dot}`;
 }
 
-// ── CHART ────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// CHART — y-axis kelipatan puluhan, data per jam per hari
+// ─────────────────────────────────────────────────────
+
+/** Bulatkan ke atas ke kelipatan puluhan terdekat */
+function ceilDecade(n) { return Math.ceil(n / 10) * 10; }
+/** Bulatkan ke bawah ke kelipatan puluhan terdekat */
+function floorDecade(n) { return Math.floor(n / 10) * 10; }
+
 const commonOpts = {
   chart: {
     type: 'area',
@@ -690,8 +699,7 @@ const commonOpts = {
     toolbar: { show: false },
     zoom: { enabled: false },
     fontFamily: 'Inter, sans-serif',
-    animations: { enabled: true, speed: 400 },
-    sparkline: { enabled: false },
+    animations: { enabled: true, speed: 600 },
     redrawOnWindowResize: true,
   },
   fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0, stops: [0, 90, 100] } },
@@ -701,9 +709,16 @@ const commonOpts = {
     type: 'category',
     categories: [],
     labels: { style: { colors: '#727785', fontSize: '10px' }, rotate: -30, hideOverlappingLabels: true, maxHeight: 50 },
-    tickAmount: 6,
+    tickAmount: 8,
   },
-  yaxis: { labels: { style: { colors: '#727785', fontSize: '10px' } } },
+  yaxis: {
+    labels: {
+      style: { colors: '#727785', fontSize: '10px' },
+      // Format label: hanya tampilkan kelipatan 10
+      formatter: (val) => Number.isInteger(val) ? val : ''
+    },
+    tickAmount: 5,
+  },
   grid: { borderColor: '#e5eeff', strokeDashArray: 4, padding: { left: 4, right: 4 } },
   tooltip: { x: { show: true } },
   noData: { text: 'Menunggu data dari sensor...', style: { color: '#727785', fontFamily: 'Inter' } },
@@ -714,40 +729,89 @@ const commonOpts = {
 
 function initCharts() {
   chartTemp = new ApexCharts(document.querySelector('#chart-temp-container'), {
-    ...commonOpts, series: [{ name: 'Suhu (°C)', data: [] }], colors: ['#0058be'],
+    ...commonOpts,
+    series: [{ name: 'Suhu (°C)', data: [] }],
+    colors: ['#0058be'],
   });
   chartTemp.render();
 
   chartGas = new ApexCharts(document.querySelector('#chart-gas-container'), {
-    ...commonOpts, series: [{ name: 'Gas (ppm)', data: [] }], colors: ['#825100'],
+    ...commonOpts,
+    series: [{ name: 'Gas (ppm)', data: [] }],
+    colors: ['#825100'],
   });
   chartGas.render();
 }
 
-// Ambil data buffer sesuai window jam yang dipilih
-function getFilteredData(windowHours) {
-  const cutoff = new Date(Date.now() - windowHours * 60 * 60 * 1000);
-  return dataBuffer.filter(d => d.ts >= cutoff);
+/**
+ * Cek apakah hari sudah berganti → reset buffer
+ */
+function checkDayReset() {
+  const today = new Date().toDateString();
+  if (today !== bufferDate) {
+    dailyBuffer = [];
+    hourAccum   = {};
+    bufferDate  = today;
+    console.log('[Chart] Hari baru, buffer direset.');
+  }
 }
 
-// Render chart dari buffer sesuai window aktif
-function renderCharts() {
-  const filtered = getFilteredData(activeWindow);
-  const labels   = filtered.map(d => fmtTime(d.ts));
-  const suhuData = filtered.map(d => d.suhu);
-  const gasData  = filtered.map(d => d.gas);
+/**
+ * Tambah data ke accumulator jam.
+ * Tiap jam dirata-rata dari semua data yang masuk di jam itu.
+ */
+function accumulateData(suhu, gas) {
+  checkDayReset();
+  const hour = new Date().getHours().toString().padStart(2, '0') + ':00';
+  if (!hourAccum[hour]) hourAccum[hour] = { sumSuhu: 0, sumGas: 0, count: 0 };
+  hourAccum[hour].sumSuhu += suhu;
+  hourAccum[hour].sumGas  += gas;
+  hourAccum[hour].count   += 1;
+}
 
-  const suhuMin  = Math.min(thresholds.tempMin - 2, ...suhuData.filter(v => !isNaN(v)));
-  const suhuMax  = Math.max(thresholds.tempMax + 2, ...suhuData.filter(v => !isNaN(v)));
-  const gasMaxY  = Math.max(thresholds.gasMax + 5,  ...gasData.filter(v => !isNaN(v)));
+/**
+ * Bangun dailyBuffer dari hourAccum (rata-rata per jam).
+ * Dipanggil saat render chart.
+ */
+function buildDailyBuffer() {
+  const hours = Object.keys(hourAccum).sort();
+  dailyBuffer = hours.map(h => ({
+    hour:  h,
+    suhu:  hourAccum[h].sumSuhu / hourAccum[h].count,
+    gas:   hourAccum[h].sumGas  / hourAccum[h].count,
+  }));
+}
+
+/**
+ * Render chart dari dailyBuffer.
+ * Y-axis dibulatkan ke kelipatan puluhan.
+ * Chart TIDAK dipanggil dari sini secara real-time; hanya dari timer.
+ */
+function renderCharts() {
+  buildDailyBuffer();
+
+  const labels   = dailyBuffer.map(d => d.hour);
+  const suhuData = dailyBuffer.map(d => parseFloat(d.suhu.toFixed(1)));
+  const gasData  = dailyBuffer.map(d => parseFloat(d.gas.toFixed(1)));
+
+  // Y-axis suhu: kelipatan 10, min/max mempertimbangkan threshold
+  const suhuMin = floorDecade(Math.min(thresholds.tempMin - 2, ...suhuData.filter(v => isFinite(v)), 10));
+  const suhuMax = ceilDecade(Math.max(thresholds.tempMax + 2,  ...suhuData.filter(v => isFinite(v)), 30));
+
+  // Y-axis gas: kelipatan 10
+  const gasMax  = ceilDecade(Math.max(thresholds.gasMax + 5, ...gasData.filter(v => isFinite(v)), 20));
 
   if (chartTemp) {
     chartTemp.updateOptions({
       xaxis: { categories: labels },
       yaxis: {
-        min: isFinite(suhuMin) ? Math.floor(suhuMin) : 0,
-        max: isFinite(suhuMax) ? Math.ceil(suhuMax)  : thresholds.tempMax + 5,
-        labels: { style: { colors: '#727785', fontSize: '10px' } },
+        min: suhuMin,
+        max: suhuMax,
+        tickAmount: Math.round((suhuMax - suhuMin) / 10),
+        labels: {
+          style: { colors: '#727785', fontSize: '10px' },
+          formatter: (val) => val % 10 === 0 ? val : ''
+        },
       },
       annotations: {
         yaxis: [
@@ -758,13 +822,18 @@ function renderCharts() {
     }, false, false);
     chartTemp.updateSeries([{ name: 'Suhu (°C)', data: suhuData }], false);
   }
+
   if (chartGas) {
     chartGas.updateOptions({
       xaxis: { categories: labels },
       yaxis: {
         min: 0,
-        max: isFinite(gasMaxY) ? Math.ceil(gasMaxY) : thresholds.gasMax + 5,
-        labels: { style: { colors: '#727785', fontSize: '10px' } },
+        max: gasMax,
+        tickAmount: Math.round(gasMax / 10),
+        labels: {
+          style: { colors: '#727785', fontSize: '10px' },
+          formatter: (val) => val % 10 === 0 ? val : ''
+        },
       },
       annotations: {
         yaxis: [
@@ -774,41 +843,79 @@ function renderCharts() {
     }, false, false);
     chartGas.updateSeries([{ name: 'Gas (ppm)', data: gasData }], false);
   }
+
+  // Update label tanggal
+  const dateEl = document.getElementById('chart-date-label');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
 }
 
-// Tambah titik data baru ke buffer
-function pushData(suhu, gas) {
-  dataBuffer.push({ ts: new Date(), suhu, gas });
-  if (dataBuffer.length > MAX_BUFFER) dataBuffer.shift();
-  renderCharts();
+/**
+ * Jadwalkan render chart berikutnya tiap 60 detik.
+ * Bukan real-time — grafik hanya diperbarui per menit.
+ */
+function scheduleChartRender() {
+  if (chartRenderTimer) return; // sudah terjadwal
+  chartRenderTimer = setInterval(() => {
+    renderCharts();
+  }, 60 * 1000); // tiap 60 detik
 }
 
-// ── TIME FILTER BUTTONS ──────────────────────────────────
-function setupTimeFilter() {
-  const subtitle = document.getElementById('chart-subtitle');
-  document.querySelectorAll('.time-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeWindow = parseInt(btn.dataset.window);
-      if (subtitle) subtitle.textContent = `Data historis ${btn.dataset.label} terakhir`;
-      renderCharts();
-      showToast(`Grafik diperbarui: ${btn.dataset.label} terakhir`);
-    });
-  });
+// ─────────────────────────────────────────────────────
+// SENSOR DATA — pair suhu+gas sebelum accumulate
+// ─────────────────────────────────────────────────────
+/**
+ * Suhu dan gas datang lewat topik terpisah.
+ * Kita tunggu keduanya tersedia (dalam window 3 detik) sebelum
+ * memasukkan ke accumulator, agar titik grafik selalu berpasangan.
+ */
+let pairTimer = null;
+
+function onSuhuReceived(val) {
+  pendingSuhu = val;
+  lastSuhu    = val;
+  updateSensorUI(lastSuhu, lastGas);
+  tryPairAndAccumulate();
 }
 
-// ── SENSOR UI UPDATE ─────────────────────────────────────
-let lastSuhu = 0, lastGas = 0;
+function onGasReceived(val) {
+  pendingGas = val;
+  lastGas    = val;
+  updateSensorUI(lastSuhu, lastGas);
+  tryPairAndAccumulate();
+}
 
+function tryPairAndAccumulate() {
+  // Jika keduanya sudah ada, langsung akumulasi
+  if (pendingSuhu !== null && pendingGas !== null) {
+    accumulateData(pendingSuhu, pendingGas);
+    pendingSuhu = null;
+    pendingGas  = null;
+    if (pairTimer) { clearTimeout(pairTimer); pairTimer = null; }
+    return;
+  }
+  // Jika baru salah satu, tunggu 3 detik lalu akumulasi apa adanya
+  if (pairTimer) return;
+  pairTimer = setTimeout(() => {
+    pairTimer = null;
+    if (pendingSuhu !== null || pendingGas !== null) {
+      const s = pendingSuhu !== null ? pendingSuhu : lastSuhu;
+      const g = pendingGas  !== null ? pendingGas  : lastGas;
+      accumulateData(s, g);
+      pendingSuhu = null;
+      pendingGas  = null;
+    }
+  }, 3000);
+}
+
+// ─────────────────────────────────────────────────────
+// SENSOR UI UPDATE
+// ─────────────────────────────────────────────────────
 function updateSensorUI(suhu, gas) {
-  lastSuhu = suhu; lastGas = gas;
-
-  // Suhu value
   const elSuhu = document.getElementById('val-suhu');
   if (elSuhu) elSuhu.textContent = suhu.toFixed(1);
 
-  // Gauge arc (r=42, circumference=264)
   const arc = document.getElementById('gauge-suhu-arc');
   if (arc) {
     const pct    = Math.min(Math.max((suhu - 20) / (50 - 20), 0), 1);
@@ -817,11 +924,9 @@ function updateSensorUI(suhu, gas) {
     arc.style.stroke = suhu >= thresholds.tempMax ? '#ba1a1a' : suhu >= thresholds.tempMax - 2 ? '#f59e0b' : '#0058be';
   }
 
-  // Gas value
   const elGas = document.getElementById('val-gas');
   if (elGas) elGas.textContent = gas.toFixed(0);
 
-  // Progress bar
   const bar = document.getElementById('gas-bar');
   if (bar) {
     const pct = Math.min((gas / thresholds.gasMax) * 100, 100);
@@ -856,14 +961,15 @@ function updateAlert(suhu, gas) {
   }
 }
 
-// ── DEVICE STATE ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// DEVICE STATE
+// ─────────────────────────────────────────────────────
 function applyDeviceState(device, isOn) {
   const toggle    = document.getElementById('toggle-' + device);
   const label     = document.getElementById('label-' + device);
   const icon      = document.getElementById('icon-' + device);
   const container = document.getElementById('container-' + device);
   if (!toggle) return;
-
   const knob = toggle.querySelector('div');
   if (isOn) {
     toggle.classList.remove('bg-surface-variant'); toggle.classList.add('bg-primary');
@@ -884,24 +990,20 @@ function applyDeviceState(device, isOn) {
     if (device === 'kipas') icon.classList.remove('animate-spin');
     container.className = 'bg-surface rounded-xl p-3 md:p-4 flex items-center justify-between border border-outline-variant/50 transition-all';
   }
-
-  toggle.classList.toggle('opacity-50', currentMode === 'auto');
+  toggle.classList.toggle('opacity-50',        currentMode === 'auto');
   toggle.classList.toggle('cursor-not-allowed', currentMode === 'auto');
-  toggle.classList.toggle('cursor-pointer', currentMode !== 'auto');
+  toggle.classList.toggle('cursor-pointer',    currentMode !== 'auto');
 }
 
-// ── MODE AUTO / MANUAL ───────────────────────────────────
-// Flag: true = sedang proses update dari MQTT (bukan dari user)
-let mqttModeIncoming = false;
-
-// updateModeUI: hanya update tampilan, TIDAK publish
+// ─────────────────────────────────────────────────────
+// MODE AUTO / MANUAL
+// ─────────────────────────────────────────────────────
 function updateModeUI(mode) {
   currentMode = mode;
   const btnM  = document.getElementById('btn-manual');
   const btnA  = document.getElementById('btn-auto');
   const info  = document.getElementById('mode-info-text');
   const isAuto = mode === 'auto';
-
   if (isAuto) {
     btnA.className = 'px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-on-primary shadow-sm transition-all';
     btnM.className = 'px-3 py-1 rounded-full text-[10px] font-semibold text-on-surface-variant transition-all';
@@ -911,7 +1013,6 @@ function updateModeUI(mode) {
     btnA.className = 'px-3 py-1 rounded-full text-[10px] font-semibold text-on-surface-variant transition-all';
     if (info) info.textContent = 'Mode Manual Aktif. Kontrol manual diizinkan.';
   }
-
   ['kipas', 'lampu'].forEach(d => {
     const t = document.getElementById('toggle-' + d);
     if (!t) return;
@@ -921,43 +1022,64 @@ function updateModeUI(mode) {
   });
 }
 
-// setModeByUser: dipanggil HANYA saat user klik tombol mode
 function setModeByUser(mode) {
-  if (currentMode === mode) return; // Tidak berubah, abaikan
-
+  if (currentMode === mode) return;
   updateModeUI(mode);
-  mqttPublish(TOPICS.MODE, mode); // Publish ke ESP32
+  mqttPublish(TOPICS.MODE, mode);
   addLog('toggle_on', `Mode ${mode === 'auto' ? 'Otomatis' : 'Manual'} Aktif`, 'Diubah oleh pengguna');
   showToast(mode === 'auto' ? 'Mode Otomatis Aktif' : 'Mode Manual Aktif');
 }
 
-// ── SAVE SETTINGS ────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// SINKRONISASI UI THRESHOLD (dashboard + form + info box)
+// ─────────────────────────────────────────────────────
+function syncThresholdUI() {
+  // Dashboard batas ambang
+  const dMin = document.getElementById('dashboard-temp-min');
+  const dMax = document.getElementById('dashboard-temp-max');
+  const dGas = document.getElementById('dashboard-gas-max');
+  const lGas = document.getElementById('gas-max-label');
+  if (dMin) dMin.textContent = `${thresholds.tempMin}°C`;
+  if (dMax) dMax.textContent = `${thresholds.tempMax}°C`;
+  if (dGas) dGas.innerHTML  = `${thresholds.gasMax}<span class="text-[10px] font-normal ml-0.5">ppm</span>`;
+  if (lGas) lGas.textContent = thresholds.gasMax;
+
+  // Form pengaturan
+  const stMin = document.getElementById('setting-temp-min');
+  const stMax = document.getElementById('setting-temp-max');
+  const sgMax = document.getElementById('setting-gas-max');
+  if (stMin) stMin.value = thresholds.tempMin;
+  if (stMax) stMax.value = thresholds.tempMax;
+  if (sgMax) sgMax.value = thresholds.gasMax;
+
+  // Info box di pengaturan
+  const iMin = document.getElementById('info-temp-min');
+  const iMax = document.getElementById('info-temp-max');
+  const iGas = document.getElementById('info-gas-max');
+  if (iMin) iMin.textContent = thresholds.tempMin;
+  if (iMax) iMax.textContent = thresholds.tempMax;
+  if (iGas) iGas.textContent = thresholds.gasMax;
+}
+
+// ─────────────────────────────────────────────────────
+// SAVE SETTINGS
+// ─────────────────────────────────────────────────────
 function saveSettings() {
   const tempMin = parseFloat(document.getElementById('setting-temp-min').value);
   const tempMax = parseFloat(document.getElementById('setting-temp-max').value);
   const gasMax  = parseInt(document.getElementById('setting-gas-max').value);
 
-  if (tempMin >= tempMax) { showToast('Suhu Min harus lebih kecil dari Suhu Max', 'error'); return; }
-  if (isNaN(tempMin) || isNaN(tempMax) || isNaN(gasMax)) { showToast('Nilai tidak valid', 'error'); return; }
+  if (isNaN(tempMin) || isNaN(tempMax) || isNaN(gasMax)) {
+    showToast('Nilai tidak valid', 'error'); return;
+  }
+  if (tempMin >= tempMax) {
+    showToast('Suhu Min harus lebih kecil dari Suhu Max', 'error'); return;
+  }
 
   thresholds = { tempMin, tempMax, gasMax };
-  // Simpan ke localStorage supaya tidak reset saat reload
-  try { localStorage.setItem('smartfarm_thresholds', JSON.stringify(thresholds)); } catch(e) {}
-
-  const dMin = document.getElementById('dashboard-temp-min');
-  const dMax = document.getElementById('dashboard-temp-max');
-  const dGas = document.getElementById('dashboard-gas-max');
-  const lGas = document.getElementById('gas-max-label');
-
-  if (dMin) dMin.textContent = `${tempMin}°C`;
-  if (dMax) dMax.textContent = `${tempMax}°C`;
-  if (dGas) dGas.innerHTML   = `${gasMax}<span class="text-[10px] font-normal ml-0.5">ppm</span>`;
-  if (lGas) lGas.textContent = gasMax;
-
-  // Re-render grafik dengan y-axis dan anotasi threshold baru
+  saveThresholds(thresholds);  // Simpan ke localStorage dengan key v2
+  syncThresholdUI();
   renderCharts();
-
-  // Update alert & gauge dengan nilai sensor terakhir
   if (lastSuhu !== 0 || lastGas !== 0) updateSensorUI(lastSuhu, lastGas);
 
   mqttPublish(TOPICS.THRESHOLD_TEMP_MIN, tempMin.toString());
@@ -968,16 +1090,16 @@ function saveSettings() {
   showToast('Pengaturan tersimpan & disinkronkan ke ESP32 ✓');
 }
 
-// ── NAVIGASI ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// NAVIGASI
+// ─────────────────────────────────────────────────────
 function navigateTo(sec) {
   ['dashboard', 'pengaturan'].forEach(s => {
     const sEl  = document.getElementById('section-' + s);
     const nEl  = document.getElementById('nav-' + s);
     const mEl  = document.getElementById('mob-' + s);
     const active = s === sec;
-
     if (sEl) sEl.classList.toggle('hidden', !active);
-
     if (nEl) {
       nEl.className = active
         ? 'nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium bg-surface-container text-primary overflow-hidden'
@@ -989,12 +1111,13 @@ function navigateTo(sec) {
         : 'flex flex-col items-center gap-0.5 px-6 py-2 text-on-surface-variant rounded-xl min-w-[64px]';
     }
   });
-  // Scroll ke atas saat pindah section
   const wrapper = document.getElementById('main-wrapper');
   if (wrapper) wrapper.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── MQTT ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// MQTT
+// ─────────────────────────────────────────────────────
 function mqttPublish(topic, payload) {
   if (client && client.connected) {
     client.publish(topic, payload);
@@ -1009,7 +1132,6 @@ function initMQTT(host, opts) {
   if (client) { try { client.end(true); } catch(e){} client = null; }
   setMqttStatus('connecting');
   addLog('wifi', 'Menghubungkan...', `Host: ${host.substring(0, 40)}...`);
-
   try { client = mqtt.connect(host, opts); }
   catch (e) { setMqttStatus('error'); showToast('Gagal koneksi: ' + e.message, 'error'); return; }
 
@@ -1027,20 +1149,12 @@ function initMQTT(host, opts) {
     switch (topic) {
       case TOPICS.SUHU: {
         const s = parseFloat(val);
-        if (!isNaN(s)) {
-          lastSuhu = s;
-          updateSensorUI(lastSuhu, lastGas); // update display langsung
-          pushData(lastSuhu, lastGas);       // update grafik
-        }
+        if (!isNaN(s)) onSuhuReceived(s);
         break;
       }
       case TOPICS.GAS: {
         const g = parseFloat(val);
-        if (!isNaN(g)) {
-          lastGas = g;
-          updateSensorUI(lastSuhu, lastGas); // update display langsung
-          pushData(lastSuhu, lastGas);       // update grafik
-        }
+        if (!isNaN(g)) onGasReceived(g);
         break;
       }
       case TOPICS.KIPAS:
@@ -1050,20 +1164,14 @@ function initMQTT(host, opts) {
         applyDeviceState('lampu', val === '1' || val.toLowerCase() === 'on');
         break;
       case TOPICS.MODE:
-        // Terima mode dari MQTT (dari ESP32 atau broker)
-        // Hanya update UI, JANGAN publish balik — anti feedback loop
-        if (val === 'auto' || val === 'manual') {
-          if (currentMode !== val) {
-            // Silent update: update tampilan tapi tidak toast, tidak log, tidak publish
-            updateModeUI(val);
-            console.log(`[MQTT] Mode sync dari broker: ${val}`);
-          }
+        if ((val === 'auto' || val === 'manual') && currentMode !== val) {
+          updateModeUI(val);
         }
         break;
     }
   });
 
-  client.on('error',     err => { setMqttStatus('error'); addLog('error', 'Koneksi gagal', err.message); console.error('[MQTT]', err); });
+  client.on('error',     err => { setMqttStatus('error'); addLog('error', 'Koneksi gagal', err.message); });
   client.on('close',     ()  => { setMqttStatus('error'); });
   client.on('reconnect', ()  => { setMqttStatus('connecting'); });
 }
@@ -1072,34 +1180,21 @@ function reconnectMQTT() {
   const host = document.getElementById('setting-mqtt-host').value.trim() || MQTT_CONFIG.host;
   const user = document.getElementById('setting-mqtt-user').value.trim() || MQTT_CONFIG.options.username;
   const pass = document.getElementById('setting-mqtt-pass').value.trim() || MQTT_CONFIG.options.password;
-  initMQTT(host, { ...MQTT_CONFIG.options, username: user, password: pass, clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8) });
+  initMQTT(host, { ...MQTT_CONFIG.options, username: user, password: pass,
+    clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8) });
 }
 
-// ══════════════════════════════════════════════════
-// DOMContentLoaded — Bootstrap semua
-// ══════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────
+// BOOTSTRAP
+// ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 
   // Waktu log awal
   const li = document.getElementById('log-time-init');
   if (li) li.textContent = getTimeNow();
 
-  // Sinkronkan form dan dashboard dari thresholds yang tersimpan
-  const stMin = document.getElementById('setting-temp-min');
-  const stMax = document.getElementById('setting-temp-max');
-  const sgMax = document.getElementById('setting-gas-max');
-  if (stMin) stMin.value = thresholds.tempMin;
-  if (stMax) stMax.value = thresholds.tempMax;
-  if (sgMax) sgMax.value = thresholds.gasMax;
-
-  const dMin = document.getElementById('dashboard-temp-min');
-  const dMax = document.getElementById('dashboard-temp-max');
-  const dGas = document.getElementById('dashboard-gas-max');
-  const lGas = document.getElementById('gas-max-label');
-  if (dMin) dMin.textContent = `${thresholds.tempMin}°C`;
-  if (dMax) dMax.textContent = `${thresholds.tempMax}°C`;
-  if (dGas) dGas.innerHTML   = `${thresholds.gasMax}<span class="text-[10px] font-normal ml-0.5">ppm</span>`;
-  if (lGas) lGas.textContent = thresholds.gasMax;
+  // Sync semua UI threshold dari state yang sudah di-load
+  syncThresholdUI();
 
   // Isi form MQTT
   const h = document.getElementById('setting-mqtt-host');
@@ -1112,13 +1207,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init charts
   initCharts();
 
-  // Time filter
-  setupTimeFilter();
+  // Render awal (kosong) dengan label tanggal
+  renderCharts();
+
+  // Jadwalkan render tiap 60 detik
+  scheduleChartRender();
 
   // Init MQTT
   initMQTT(MQTT_CONFIG.host, MQTT_CONFIG.options);
 
-  // Navigasi desktop + mobile
+  // Navigasi
   ['dashboard', 'pengaturan'].forEach(s => {
     const n = document.getElementById('nav-' + s);
     const m = document.getElementById('mob-' + s);
@@ -1156,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const bs = document.getElementById('btn-save-settings');
   if (bs) bs.addEventListener('click', saveSettings);
 
-  // Resize chart saat window resize (penting untuk tablet rotation)
+  // Resize chart
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
