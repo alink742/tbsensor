@@ -324,7 +324,7 @@ tailwind.config = {
             <div class="space-y-2">
               <div class="flex justify-between text-[11px] font-medium text-on-surface-variant">
                 <span>Normal</span>
-                <span>Max: <span id="gas-max-label">300</span> ppm</span>
+                <span>Max: <span id="gas-max-label">20</span> ppm</span>
               </div>
               <div class="w-full bg-surface-variant rounded-full h-3 overflow-hidden">
                 <div id="gas-bar" class="h-full rounded-full relative transition-all duration-700" style="width:0%;background:#825100;">
@@ -396,21 +396,21 @@ tailwind.config = {
                 <span class="material-symbols-outlined text-[16px]">ac_unit</span>
                 <span class="text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Suhu Min</span>
               </div>
-              <div class="text-[15px] font-bold text-on-surface bg-surface-container px-2 py-0.5 rounded-lg" id="dashboard-temp-min">30°C</div>
+              <div class="text-[15px] font-bold text-on-surface bg-surface-container px-2 py-0.5 rounded-lg" id="dashboard-temp-min">20°C</div>
             </div>
             <div class="flex flex-col sm:flex-row lg:flex-row justify-between items-start sm:items-center gap-1 bg-surface-container-low/60 p-2.5 rounded-xl lg:bg-transparent lg:p-0">
               <div class="flex items-center gap-1.5 text-error">
                 <span class="material-symbols-outlined text-[16px]">local_fire_department</span>
                 <span class="text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Suhu Max</span>
               </div>
-              <div class="text-[15px] font-bold text-error bg-error-container px-2 py-0.5 rounded-lg" id="dashboard-temp-max">35°C</div>
+              <div class="text-[15px] font-bold text-error bg-error-container px-2 py-0.5 rounded-lg" id="dashboard-temp-max">25°C</div>
             </div>
             <div class="flex flex-col sm:flex-row lg:flex-row justify-between items-start sm:items-center gap-1 bg-surface-container-low/60 p-2.5 rounded-xl lg:bg-transparent lg:p-0">
               <div class="flex items-center gap-1.5 text-tertiary">
                 <span class="material-symbols-outlined text-[16px]">co2</span>
                 <span class="text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Gas Max</span>
               </div>
-              <div class="text-[15px] font-bold text-tertiary bg-tertiary-container px-2 py-0.5 rounded-lg" id="dashboard-gas-max">300<span class="text-[10px] font-normal ml-0.5">ppm</span></div>
+              <div class="text-[15px] font-bold text-tertiary bg-tertiary-container px-2 py-0.5 rounded-lg" id="dashboard-gas-max">20<span class="text-[10px] font-normal ml-0.5">ppm</span></div>
             </div>
           </div>
         </div>
@@ -516,7 +516,7 @@ tailwind.config = {
                   <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[18px]">device_thermostat</span>
                   </span>
-                  <input id="setting-temp-min" type="number" value="30"
+                  <input id="setting-temp-min" type="number" value="20"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
                 </div>
               </div>
@@ -526,7 +526,7 @@ tailwind.config = {
                   <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[18px]">device_thermostat</span>
                   </span>
-                  <input id="setting-temp-max" type="number" value="35"
+                  <input id="setting-temp-max" type="number" value="25"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
                 </div>
               </div>
@@ -536,7 +536,7 @@ tailwind.config = {
                   <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[18px]">air</span>
                   </span>
-                  <input id="setting-gas-max" type="number" value="300"
+                  <input id="setting-gas-max" type="number" value="20"
                     class="w-full pl-9 pr-3 py-2.5 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-[13px] text-on-surface transition-all"/>
                 </div>
               </div>
@@ -603,7 +603,13 @@ let client        = null;
 let currentMode   = 'auto';
 let chartTemp     = null;
 let chartGas      = null;
-let thresholds    = { tempMin: 30, tempMax: 35, gasMax: 300 };
+
+// Load threshold dari localStorage, fallback ke default 20/25/20
+const _savedThresholds = (() => {
+  try { return JSON.parse(localStorage.getItem('smartfarm_thresholds')); } catch(e) { return null; }
+})();
+let thresholds = _savedThresholds || { tempMin: 20, tempMax: 25, gasMax: 20 };
+
 let activeWindow  = 12; // jam
 
 // Buffer semua data historis (timestamp + nilai)
@@ -731,12 +737,41 @@ function renderCharts() {
   const suhuData = filtered.map(d => d.suhu);
   const gasData  = filtered.map(d => d.gas);
 
+  const suhuMin  = Math.min(thresholds.tempMin - 2, ...suhuData.filter(v => !isNaN(v)));
+  const suhuMax  = Math.max(thresholds.tempMax + 2, ...suhuData.filter(v => !isNaN(v)));
+  const gasMaxY  = Math.max(thresholds.gasMax + 5,  ...gasData.filter(v => !isNaN(v)));
+
   if (chartTemp) {
-    chartTemp.updateOptions({ xaxis: { categories: labels } }, false, false);
+    chartTemp.updateOptions({
+      xaxis: { categories: labels },
+      yaxis: {
+        min: isFinite(suhuMin) ? Math.floor(suhuMin) : 0,
+        max: isFinite(suhuMax) ? Math.ceil(suhuMax)  : thresholds.tempMax + 5,
+        labels: { style: { colors: '#727785', fontSize: '10px' } },
+      },
+      annotations: {
+        yaxis: [
+          { y: thresholds.tempMin, borderColor: '#0058be', label: { text: `Min ${thresholds.tempMin}°C`, style: { color: '#fff', background: '#0058be', fontSize: '10px' } } },
+          { y: thresholds.tempMax, borderColor: '#ba1a1a', label: { text: `Max ${thresholds.tempMax}°C`, style: { color: '#fff', background: '#ba1a1a', fontSize: '10px' } } },
+        ]
+      }
+    }, false, false);
     chartTemp.updateSeries([{ name: 'Suhu (°C)', data: suhuData }], false);
   }
   if (chartGas) {
-    chartGas.updateOptions({ xaxis: { categories: labels } }, false, false);
+    chartGas.updateOptions({
+      xaxis: { categories: labels },
+      yaxis: {
+        min: 0,
+        max: isFinite(gasMaxY) ? Math.ceil(gasMaxY) : thresholds.gasMax + 5,
+        labels: { style: { colors: '#727785', fontSize: '10px' } },
+      },
+      annotations: {
+        yaxis: [
+          { y: thresholds.gasMax, borderColor: '#ba1a1a', label: { text: `Max ${thresholds.gasMax} ppm`, style: { color: '#fff', background: '#ba1a1a', fontSize: '10px' } } },
+        ]
+      }
+    }, false, false);
     chartGas.updateSeries([{ name: 'Gas (ppm)', data: gasData }], false);
   }
 }
@@ -906,6 +941,8 @@ function saveSettings() {
   if (isNaN(tempMin) || isNaN(tempMax) || isNaN(gasMax)) { showToast('Nilai tidak valid', 'error'); return; }
 
   thresholds = { tempMin, tempMax, gasMax };
+  // Simpan ke localStorage supaya tidak reset saat reload
+  try { localStorage.setItem('smartfarm_thresholds', JSON.stringify(thresholds)); } catch(e) {}
 
   const dMin = document.getElementById('dashboard-temp-min');
   const dMax = document.getElementById('dashboard-temp-max');
@@ -916,6 +953,12 @@ function saveSettings() {
   if (dMax) dMax.textContent = `${tempMax}°C`;
   if (dGas) dGas.innerHTML   = `${gasMax}<span class="text-[10px] font-normal ml-0.5">ppm</span>`;
   if (lGas) lGas.textContent = gasMax;
+
+  // Re-render grafik dengan y-axis dan anotasi threshold baru
+  renderCharts();
+
+  // Update alert & gauge dengan nilai sensor terakhir
+  if (lastSuhu !== 0 || lastGas !== 0) updateSensorUI(lastSuhu, lastGas);
 
   mqttPublish(TOPICS.THRESHOLD_TEMP_MIN, tempMin.toString());
   mqttPublish(TOPICS.THRESHOLD_TEMP_MAX, tempMax.toString());
@@ -984,12 +1027,20 @@ function initMQTT(host, opts) {
     switch (topic) {
       case TOPICS.SUHU: {
         const s = parseFloat(val);
-        if (!isNaN(s)) { updateSensorUI(s, lastGas); pushData(s, lastGas); }
+        if (!isNaN(s)) {
+          lastSuhu = s;
+          updateSensorUI(lastSuhu, lastGas); // update display langsung
+          pushData(lastSuhu, lastGas);       // update grafik
+        }
         break;
       }
       case TOPICS.GAS: {
         const g = parseFloat(val);
-        if (!isNaN(g)) { updateSensorUI(lastSuhu, g); pushData(lastSuhu, g); }
+        if (!isNaN(g)) {
+          lastGas = g;
+          updateSensorUI(lastSuhu, lastGas); // update display langsung
+          pushData(lastSuhu, lastGas);       // update grafik
+        }
         break;
       }
       case TOPICS.KIPAS:
@@ -1024,13 +1075,6 @@ function reconnectMQTT() {
   initMQTT(host, { ...MQTT_CONFIG.options, username: user, password: pass, clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8) });
 }
 
-function reconnectMQTT() {
-  const host = document.getElementById('setting-mqtt-host').value.trim() || MQTT_CONFIG.host;
-  const user = document.getElementById('setting-mqtt-user').value.trim() || MQTT_CONFIG.options.username;
-  const pass = document.getElementById('setting-mqtt-pass').value.trim() || MQTT_CONFIG.options.password;
-  initMQTT(host, { ...MQTT_CONFIG.options, username: user, password: pass, clientId: 'smartfarm_web_' + Math.random().toString(16).substr(2, 8) });
-}
-
 // ══════════════════════════════════════════════════
 // DOMContentLoaded — Bootstrap semua
 // ══════════════════════════════════════════════════
@@ -1039,6 +1083,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Waktu log awal
   const li = document.getElementById('log-time-init');
   if (li) li.textContent = getTimeNow();
+
+  // Sinkronkan form dan dashboard dari thresholds yang tersimpan
+  const stMin = document.getElementById('setting-temp-min');
+  const stMax = document.getElementById('setting-temp-max');
+  const sgMax = document.getElementById('setting-gas-max');
+  if (stMin) stMin.value = thresholds.tempMin;
+  if (stMax) stMax.value = thresholds.tempMax;
+  if (sgMax) sgMax.value = thresholds.gasMax;
+
+  const dMin = document.getElementById('dashboard-temp-min');
+  const dMax = document.getElementById('dashboard-temp-max');
+  const dGas = document.getElementById('dashboard-gas-max');
+  const lGas = document.getElementById('gas-max-label');
+  if (dMin) dMin.textContent = `${thresholds.tempMin}°C`;
+  if (dMax) dMax.textContent = `${thresholds.tempMax}°C`;
+  if (dGas) dGas.innerHTML   = `${thresholds.gasMax}<span class="text-[10px] font-normal ml-0.5">ppm</span>`;
+  if (lGas) lGas.textContent = thresholds.gasMax;
 
   // Isi form MQTT
   const h = document.getElementById('setting-mqtt-host');
